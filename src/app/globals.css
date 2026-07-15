@@ -1,26 +1,90 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+@theme {
+  --color-surface: #FAFAF8;
+  --color-surface-up: #FFFFFF;
+  --color-surface-sub: #F0F0EC;
+  --color-ink: #18181B;
+  --color-ink-2: #52525B;
+  --color-ink-3: #A1A1AA;
+  --color-line: #E4E4E0;
+  --color-line-2: #CECECA;
+  --color-accent: #D97706;
+  --color-accent-h: #B45309;
+  --color-accent-bg: #FFFBEB;
+  --color-red: #DC2626;
+  --color-green: #16A34A;
+
+  --font-sans: var(--font-ibm-plex-sans), system-ui, sans-serif;
+  --font-serif: var(--font-instrument-serif), Georgia, serif;
+  --font-mono: var(--font-jetbrains-mono), "Cascadia Code", monospace;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
+/* Dark mode overrides */
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --color-surface: #0E0E0D;
+    --color-surface-up: #141412;
+    --color-surface-sub: #1A1A18;
+    --color-ink: #F0F0E8;
+    --color-ink-2: #9A9A8E;
+    --color-ink-3: #4A4A42;
+    --color-line: #222220;
+    --color-line-2: #2C2C28;
+    --color-accent: #F59E0B;
+    --color-accent-h: #FBBF24;
+    --color-accent-bg: #1A1200;
+    --color-red: #F87171;
+    --color-green: #4ADE80;
   }
 }
 
+/* Explicit utilities — Tailwind v4 JIT does not auto-generate bg/text/border
+   for custom @theme colors that conflict with built-in color names */
+@layer utilities {
+  .bg-surface     { background-color: var(--color-surface); }
+  .bg-surface-up  { background-color: var(--color-surface-up); }
+  .bg-surface-sub { background-color: var(--color-surface-sub); }
+
+  .text-ink   { color: var(--color-ink); }
+  .text-ink-2 { color: var(--color-ink-2); }
+  .text-ink-3 { color: var(--color-ink-3); }
+
+  .border-line  { border-color: var(--color-line); }
+  .border-line-2 { border-color: var(--color-line-2); }
+  .bg-line-2    { background-color: var(--color-line-2); }
+  .divide-line > :not([hidden]) ~ :not([hidden]) { border-color: var(--color-line); }
+
+  .bg-amber      { background-color: var(--color-accent); }
+  .bg-amber-h    { background-color: var(--color-accent-h); }
+  .bg-amber-bg   { background-color: var(--color-accent-bg); }
+  .bg-amber-muted { background-color: color-mix(in oklab, var(--color-accent) 65%, transparent); }
+  .text-amber    { color: var(--color-accent); }
+  .text-amber-h  { color: var(--color-accent-h); }
+  .border-amber  { border-color: var(--color-accent); }
+
+  .text-red   { color: var(--color-red); }
+  .text-green { color: var(--color-green); }
+  .bg-red     { background-color: var(--color-red); }
+  .bg-green   { background-color: var(--color-green); }
+}
+
+html {
+  -webkit-font-smoothing: antialiased;
+}
+
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: var(--color-surface);
+  color: var(--color-ink);
+  font-family: var(--font-ibm-plex-sans), system-ui, sans-serif;
+  line-height: 1.5;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+::selection {
+  background: var(--color-accent-bg);
 }
