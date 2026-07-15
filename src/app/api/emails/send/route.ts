@@ -8,7 +8,7 @@ export async function POST(request: NextRequest) {
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
   const body = await request.json()
-  const { agentId, to, subject, body: emailBody, html } = body
+  const { agentId, to, subject, body: emailBody, html, cc, bcc, replyTo } = body
 
   if (!agentId || !to || !subject || !emailBody) {
     return NextResponse.json(
@@ -26,6 +26,6 @@ export async function POST(request: NextRequest) {
 
   if (!agent) return NextResponse.json({ error: "Agent not found" }, { status: 404 })
 
-  const result = await sendAgentEmail(agentId, to, subject, emailBody, html)
+  const result = await sendAgentEmail(agentId, to, subject, emailBody, html, cc, bcc, replyTo)
   return NextResponse.json(result, { status: 201 })
 }
