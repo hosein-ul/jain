@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 
-const EMAIL_DOMAIN = process.env.EMAIL_DOMAIN ?? "localhost"
-const BASE = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"
+const EMAIL_DOMAIN = process.env.EMAIL_DOMAIN || "zerolayer.online"
+const BASE = process.env.APP_URL || process.env.NEXT_PUBLIC_APP_URL || "https://zerolayer.online"
 
 // Shared schema fragments
 const EMAIL_OBJECT = {

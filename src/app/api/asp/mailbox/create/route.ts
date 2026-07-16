@@ -3,7 +3,7 @@ import { validateApiKey, getOrCreateDemoUser } from "@/lib/auth"
 import { createAgent } from "@/lib/email-service"
 import { createPaidRoute } from "@/lib/asp-route"
 
-const EMAIL_DOMAIN = process.env.EMAIL_DOMAIN ?? "localhost"
+const EMAIL_DOMAIN = process.env.EMAIL_DOMAIN || "zerolayer.online"
 
 export const POST = createPaidRoute(
   "/api/asp/mailbox/create",

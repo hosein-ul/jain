@@ -3,7 +3,7 @@ import { supabase } from "./supabase"
 import { sendEmail, cancelScheduledEmail, type Attachment } from "./resend"
 import { v4 as uuidv4 } from "uuid"
 
-const EMAIL_DOMAIN = process.env.EMAIL_DOMAIN || "localhost"
+const EMAIL_DOMAIN = process.env.EMAIL_DOMAIN || "zerolayer.online"
 
 export function generateEmailAddress(agentName: string): string {
   const sanitized = agentName.toLowerCase().replace(/[^a-z0-9-]/g, "-").replace(/-+/g, "-")
@@ -22,7 +22,7 @@ export async function createAgent(userId: string, name: string, opts?: {
   const finalName = existing ? `${name}-${uuidv4().slice(0, 6)}` : name
   const finalEmail = existing ? generateEmailAddress(finalName) : emailAddress
 
-  const { data: agent } = await supabase
+  const { data: agent, error } = await supabase
     .from("Agent")
     .insert({
       name: finalName,
@@ -35,6 +35,7 @@ export async function createAgent(userId: string, name: string, opts?: {
     .select()
     .single()
 
+  if (error) throw new Error(`[Supabase] createAgent: ${error.message}`)
   return agent
 }
 

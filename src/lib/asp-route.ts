@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { requirePayment } from "./x402"
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"
+const APP_URL = process.env.APP_URL || process.env.NEXT_PUBLIC_APP_URL || "https://zerolayer.online"
 
 export type Handler = (req: NextRequest) => Promise<NextResponse>
 
