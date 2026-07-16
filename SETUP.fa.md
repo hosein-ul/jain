@@ -25,109 +25,23 @@ npm install
 
 ---
 
-## ۳. ساخت پروژه Supabase
+## ۳. Supabase — آماده است
 
-۱. به [supabase.com](https://supabase.com) برو → **New Project**
-۲. یه اسم بذار، پسورد قوی بساز، region رو انتخاب کن → **Create**
-۳. صبر کن تا پروژه بیاد بالا (حدود ۱ دقیقه)
-۴. بعد از آماده شدن، از منوی سمت چپ برو به **Project Settings → API**:
-   - `Project URL` رو کپی کن → این میشه `NEXT_PUBLIC_SUPABASE_URL`
-   - زیر `Project API keys`، مقدار `anon public` رو کپی کن → این میشه `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-   - مقدار `service_role` رو هم کپی کن → این میشه `SUPABASE_SERVICE_KEY`
+پروژه Supabase قبلاً ساخته شده و همه جداول موجودند. مقادیر زیر را مستقیم در `.env` استفاده کن:
 
----
-
-## ۴. ساخت جداول دیتابیس
-
-۱. در Supabase از منوی سمت چپ برو به **SQL Editor**
-۲. کل این SQL رو کپی کن و اجرا کن:
-
-```sql
--- جدول کاربران
-CREATE TABLE "User" (
-    "id"        TEXT PRIMARY KEY DEFAULT gen_random_uuid()::TEXT,
-    "email"     TEXT NOT NULL UNIQUE,
-    "name"      TEXT,
-    "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
--- جدول ایجنت‌ها (هر ایجنت یه صندوق ایمیل مجزا دارد)
-CREATE TABLE "Agent" (
-    "id"              TEXT PRIMARY KEY DEFAULT gen_random_uuid()::TEXT,
-    "name"            TEXT NOT NULL,
-    "emailAddress"    TEXT NOT NULL UNIQUE,
-    "userId"          TEXT NOT NULL REFERENCES "User"("id"),
-    "displayName"     TEXT,
-    "webhookUrl"      TEXT,
-    "signature"       TEXT,
-    "autoReply"       TEXT,
-    "autoReplyActive" BOOLEAN NOT NULL DEFAULT FALSE,
-    "isActive"        BOOLEAN NOT NULL DEFAULT TRUE,
-    "createdAt"       TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
--- جدول ایمیل‌ها
-CREATE TABLE "Email" (
-    "id"           TEXT PRIMARY KEY DEFAULT gen_random_uuid()::TEXT,
-    "agentId"      TEXT NOT NULL REFERENCES "Agent"("id"),
-    "messageId"    TEXT,
-    "from"         TEXT NOT NULL,
-    "to"           TEXT NOT NULL,
-    "cc"           TEXT,
-    "bcc"          TEXT,
-    "replyTo"      TEXT,
-    "subject"      TEXT NOT NULL,
-    "body"         TEXT NOT NULL,
-    "html"         TEXT,
-    "direction"    TEXT NOT NULL CHECK ("direction" IN ('inbound','outbound')),
-    "threadId"     TEXT,
-    "isRead"       BOOLEAN NOT NULL DEFAULT FALSE,
-    "isArchived"   BOOLEAN NOT NULL DEFAULT FALSE,
-    "status"       TEXT NOT NULL DEFAULT 'sent',
-    "scheduledFor" TIMESTAMPTZ,
-    "metadata"     TEXT,
-    "createdAt"    TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
--- جدول API Key ها
-CREATE TABLE "ApiKey" (
-    "id"        TEXT PRIMARY KEY DEFAULT gen_random_uuid()::TEXT,
-    "key"       TEXT NOT NULL UNIQUE,
-    "name"      TEXT NOT NULL,
-    "userId"    TEXT NOT NULL REFERENCES "User"("id"),
-    "isActive"  BOOLEAN NOT NULL DEFAULT TRUE,
-    "lastUsed"  TIMESTAMPTZ,
-    "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
--- جدول تمپلیت‌های ایمیل
-CREATE TABLE "EmailTemplate" (
-    "id"        TEXT PRIMARY KEY DEFAULT gen_random_uuid()::TEXT,
-    "name"      TEXT NOT NULL,
-    "subject"   TEXT NOT NULL,
-    "body"      TEXT NOT NULL,
-    "html"      TEXT,
-    "userId"    TEXT NOT NULL REFERENCES "User"("id"),
-    "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
--- جدول پیوست‌ها
-CREATE TABLE "Attachment" (
-    "id"          TEXT PRIMARY KEY DEFAULT gen_random_uuid()::TEXT,
-    "emailId"     TEXT NOT NULL REFERENCES "Email"("id"),
-    "filename"    TEXT NOT NULL,
-    "contentType" TEXT NOT NULL,
-    "size"        INTEGER NOT NULL,
-    "content"     TEXT NOT NULL,
-    "createdAt"   TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
+```
+NEXT_PUBLIC_SUPABASE_URL=https://dugfnqgkwzfnpznxqtpm.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 ```
 
-۳. پیغام `Success. No rows returned` نشان می‌دهد همه چیز درست ساخته شد.
+برای `SUPABASE_SERVICE_KEY` (اختیاری ولی توصیه‌شده):
+Supabase Dashboard → **Settings → API → service_role** → کپی کن
+
+> اگر خالی بذاری، کد از `anon key` استفاده می‌کنه.
 
 ---
 
-## ۵. ساخت API Key در Resend
+## ۴. ساخت API Key در Resend
 
 ۱. به [resend.com](https://resend.com) برو → **Sign in**
 ۲. از منوی سمت چپ برو به **API Keys** → **Create API Key**
