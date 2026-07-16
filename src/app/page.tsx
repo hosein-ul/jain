@@ -2,29 +2,29 @@
 
 import Link from "next/link"
 
-const curlExample = `$ curl -X POST https://api.agentmail.dev/v1/agents \\
+const curlExample = `$ curl -X POST https://your-domain.com/api/agents \\
     -H "Authorization: Bearer am_live_xxxx" \\
     -d '{"name": "trading-bot"}'
 
 {
   "id": "agt_01j8...",
-  "email": "trading-bot@agentmail.dev",
+  "emailAddress": "trading-bot@your-domain.com",
   "created_at": "2026-07-15T10:00:00Z"
 }`
 
-const sendExample = `$ curl -X POST https://api.agentmail.dev/v1/emails \\
+const sendExample = `$ curl -X POST https://your-domain.com/api/emails/send \\
     -H "Authorization: Bearer am_live_xxxx" \\
     -d '{
-      "from": "trading-bot@agentmail.dev",
+      "agentId": "agt_01j8...",
       "to": "investor@fund.com",
       "subject": "BTC Alert: $100k crossed",
-      "text": "Your position hit the target."
+      "body": "Your position hit the target."
     }'
 
-{"id": "eml_01j8...", "status": "queued"}`
+{"email": {"id": "eml_01j8...", "status": "sent"}}`
 
 const features = [
-  ["Send", "SMTP-authenticated, DKIM-signed outbound via SendGrid"],
+  ["Send", "SMTP-authenticated, DKIM-signed outbound via Resend"],
   ["Receive", "Real MX records, inbound webhook delivery to your endpoint"],
   ["Thread", "Full RFC 5322 threading — In-Reply-To, References headers"],
   ["Search", "Full-text search across all agent mailboxes"],
@@ -158,7 +158,7 @@ export default function LandingPage() {
       <footer className="border-t border-line">
         <div className="max-w-5xl mx-auto px-6 py-8 flex items-center justify-between text-sm text-ink-3">
           <span className="font-serif">AgentMail</span>
-          <span>OKX.AI Genesis Hackathon 2026</span>
+          <span>OKX.AI Agent Service Provider</span>
         </div>
       </footer>
     </div>

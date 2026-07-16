@@ -148,7 +148,7 @@ export default function ApiKeysPage() {
         <p className="text-sm text-ink-2 mb-3">Pass the key in the Authorization header:</p>
         <pre className="text-xs font-mono text-ink bg-surface px-4 py-3 rounded border border-line overflow-x-auto">
           {`curl -H "Authorization: Bearer am_your_key_here" \\
-     https://agentmail.dev/api/agents`}
+     ${typeof window !== "undefined" ? window.location.origin : ""}/api/agents`}
         </pre>
       </div>
     </div>

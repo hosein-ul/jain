@@ -96,7 +96,7 @@ export default function AgentsPage() {
               />
               {newName && (
                 <p className="text-xs text-ink-3 font-mono mt-1.5">
-                  {emailSlug(newName)}@agentmail.dev
+                  {emailSlug(newName)}@{process.env.NEXT_PUBLIC_EMAIL_DOMAIN ?? "your-domain"}
                 </p>
               )}
             </div>

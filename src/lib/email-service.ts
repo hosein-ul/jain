@@ -3,7 +3,7 @@ import { supabase } from "./supabase"
 import { sendEmail, cancelScheduledEmail, type Attachment } from "./resend"
 import { v4 as uuidv4 } from "uuid"
 
-const EMAIL_DOMAIN = process.env.EMAIL_DOMAIN || "agentmail.dev"
+const EMAIL_DOMAIN = process.env.EMAIL_DOMAIN || "localhost"
 
 export function generateEmailAddress(agentName: string): string {
   const sanitized = agentName.toLowerCase().replace(/[^a-z0-9-]/g, "-").replace(/-+/g, "-")

@@ -5,7 +5,7 @@ import { useEffect, useState } from "react"
 export default function SettingsPage() {
   // Start with the canonical origin on both server and first client render to
   // avoid a hydration mismatch, then swap to the real origin after mount.
-  const [origin, setOrigin] = useState("https://agentmail.dev")
+  const [origin, setOrigin] = useState("")
   useEffect(() => setOrigin(window.location.origin), [])
 
   const aspServices: { path: string; price: string }[] = [
@@ -52,7 +52,7 @@ export default function SettingsPage() {
               <label className="block text-xs text-ink-2 mb-1.5">Account email</label>
               <input
                 type="email"
-                value="demo@agentmail.dev"
+                value={`demo@${process.env.NEXT_PUBLIC_EMAIL_DOMAIN ?? "localhost"}`}
                 disabled
                 className="w-full px-3 py-2 text-sm bg-surface-sub border border-line rounded text-ink-2 font-mono"
               />
@@ -61,7 +61,7 @@ export default function SettingsPage() {
               <label className="block text-xs text-ink-2 mb-1.5">Email domain</label>
               <input
                 type="text"
-                value="agentmail.dev"
+                value={process.env.NEXT_PUBLIC_EMAIL_DOMAIN ?? "not configured"}
                 disabled
                 className="w-full px-3 py-2 text-sm bg-surface-sub border border-line rounded text-ink-2 font-mono"
               />

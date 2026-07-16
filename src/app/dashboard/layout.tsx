@@ -50,7 +50,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </nav>
 
         <div className="border-t border-line px-5 py-4">
-          <p className="text-xs font-mono text-ink-3">agentmail.dev</p>
+          <p className="text-xs font-mono text-ink-3">{process.env.NEXT_PUBLIC_EMAIL_DOMAIN ?? "AgentMail"}</p>
         </div>
       </aside>
 
