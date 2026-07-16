@@ -8,7 +8,7 @@ Built as an **ASP (Agent Service Provider)** for the [OKX.AI Genesis Hackathon 2
 
 ## What it is
 
-AI agents need to communicate via email — to send alerts, receive confirmations, handle replies, and maintain ongoing conversations. AgentMail gives each agent a real, isolated email address backed by full SMTP delivery (SendGrid), real MX records, and RFC 5322-compliant threading.
+AI agents need to communicate via email — to send alerts, receive confirmations, handle replies, and maintain ongoing conversations. AgentMail gives each agent a real, isolated email address backed by full SMTP delivery (Resend), real MX records, and RFC 5322-compliant threading.
 
 Every agent gets their own exclusive mailbox. Emails never cross between agents.
 
@@ -38,11 +38,11 @@ research-agent@agentmail.dev  → no shared state with others
                         │    ┌──────┴──────┐                  │
                         │    │             │                   │
                         │    ▼             ▼                   │
-                        │  Supabase   SendGrid                 │
+                        │  Supabase    Resend                  │
                         │  (storage)  (SMTP delivery)          │
                         └─────────────────────────────────────┘
                                     ▲
-                         SendGrid Inbound Parse
+                         Resend inbound webhook
                          POST /api/webhooks/inbound
                          (real incoming emails → agent inbox)
 ```
@@ -110,7 +110,7 @@ Generate a key from the dashboard (`/dashboard/api-keys`) or via `POST /api/api-
 
 **Create agent:**
 ```bash
-curl -X POST https://agentmail.dev/api/agents \
+curl -X POST https://YOUR_DOMAIN/api/agents \
   -H "Authorization: Bearer am_..." \
   -d '{ "name": "trading-bot", "webhookUrl": "https://you.com/hook" }'
 ```
@@ -135,7 +135,7 @@ curl -X POST https://agentmail.dev/api/agents \
 
 **Send email:**
 ```bash
-curl -X POST https://agentmail.dev/api/emails/send \
+curl -X POST https://YOUR_DOMAIN/api/emails/send \
   -H "Authorization: Bearer am_..." \
   -d '{
     "agentId": "agt_01j8...",
@@ -154,7 +154,7 @@ curl -X POST https://agentmail.dev/api/emails/send \
 | GET | `/api/analytics` | Daily send/receive stats |
 | POST/GET/DELETE | `/api/api-keys` | Manage bearer tokens |
 | POST/GET/DELETE | `/api/templates` | Email templates |
-| POST | `/api/webhooks/inbound` | SendGrid inbound parse (internal) |
+| POST | `/api/webhooks/inbound` | Resend inbound webhook (internal) |
 
 ---
 
@@ -166,7 +166,7 @@ AgentMail is registered as an **ASP (Agent Service Provider)** on the OKX.AI mar
 
 ```bash
 # Returns full manifest with all endpoints and pricing
-curl https://agentmail.dev/api/asp
+curl https://YOUR_DOMAIN/api/asp
 ```
 
 ```json
@@ -206,11 +206,14 @@ Each endpoint accepts `POST` with a JSON body. Free endpoints return `200` direc
 | `POST /api/asp/mailbox/delete` | **$0.005** | Delete mailbox |
 | `POST /api/asp/email/cancel-scheduled` | **$0.005** | Cancel scheduled email |
 | `POST /api/asp/email/search` | **$0.005** | Full-text search emails |
+| `POST /api/asp/template/create` | free | Create reusable email template |
+| `POST /api/asp/template/list` | free | List all templates |
+| `POST /api/asp/template/delete` | free | Delete a template |
 
 ### Example: create a mailbox
 
 ```bash
-curl -X POST https://agentmail.dev/api/asp/mailbox/create \
+curl -X POST https://YOUR_DOMAIN/api/asp/mailbox/create \
   -H "Authorization: Bearer am_your_key" \
   -H "PAYMENT-SIGNATURE: <x402-proof>" \
   -H "Content-Type: application/json" \
@@ -230,7 +233,7 @@ curl -X POST https://agentmail.dev/api/asp/mailbox/create \
 ### Example: send an email
 
 ```bash
-curl -X POST https://agentmail.dev/api/asp/email/send \
+curl -X POST https://YOUR_DOMAIN/api/asp/email/send \
   -H "Authorization: Bearer am_your_key" \
   -H "PAYMENT-SIGNATURE: <x402-proof>" \
   -H "Content-Type: application/json" \
@@ -298,8 +301,8 @@ Each `Agent` row has `emailAddress TEXT UNIQUE`. `receiveEmail` resolves the age
 ### 1. Clone and install
 
 ```bash
-git clone https://github.com/hosein-ul/agentmail
-cd agentmail
+git clone https://github.com/hosein-ul/jain
+cd jain
 npm install
 ```
 
@@ -357,23 +360,25 @@ Registration happens **in conversation with the OKX.AI agent** (not a web form o
 - **Fee** — a bare number in **USDT**, digits only, no `$`/symbol/unit (e.g. `0.25`). Free services omit the fee.
 - **Endpoint** — a public `https://` URL (permanent on-chain; localhost/http rejected)
 
+Replace `YOUR_DOMAIN` with your actual deployed URL (e.g. your Vercel URL). Endpoint URLs are permanent on-chain once registered.
+
 The paid services to register (fee is USDT; the on-chain asset is USDT0 on X Layer):
 
 | Service | Endpoint | Fee (USDT) |
 |---|---|---|
-| Create Agent Mailbox | `https://agentmail.dev/api/asp/mailbox/create` | `0.25` |
-| Send Email | `https://agentmail.dev/api/asp/email/send` | `0.02` |
-| Send Templated Email | `https://agentmail.dev/api/asp/template/send` | `0.02` |
-| Reply to Email | `https://agentmail.dev/api/asp/email/reply` | `0.01` |
-| Reply All | `https://agentmail.dev/api/asp/email/reply-all` | `0.01` |
-| Forward Email | `https://agentmail.dev/api/asp/email/forward` | `0.01` |
-| Bulk Template Send | `https://agentmail.dev/api/asp/template/send-bulk` | `0.05` |
-| Update Mailbox | `https://agentmail.dev/api/asp/mailbox/update` | `0.005` |
-| Delete Mailbox | `https://agentmail.dev/api/asp/mailbox/delete` | `0.005` |
-| Cancel Scheduled Email | `https://agentmail.dev/api/asp/email/cancel-scheduled` | `0.005` |
-| Search Emails | `https://agentmail.dev/api/asp/email/search` | `0.005` |
+| Create Agent Mailbox | `https://YOUR_DOMAIN/api/asp/mailbox/create` | `0.25` |
+| Send Email | `https://YOUR_DOMAIN/api/asp/email/send` | `0.02` |
+| Send Templated Email | `https://YOUR_DOMAIN/api/asp/template/send` | `0.02` |
+| Reply to Email | `https://YOUR_DOMAIN/api/asp/email/reply` | `0.01` |
+| Reply All | `https://YOUR_DOMAIN/api/asp/email/reply-all` | `0.01` |
+| Forward Email | `https://YOUR_DOMAIN/api/asp/email/forward` | `0.01` |
+| Bulk Template Send | `https://YOUR_DOMAIN/api/asp/template/send-bulk` | `0.05` |
+| Update Mailbox | `https://YOUR_DOMAIN/api/asp/mailbox/update` | `0.005` |
+| Delete Mailbox | `https://YOUR_DOMAIN/api/asp/mailbox/delete` | `0.005` |
+| Cancel Scheduled Email | `https://YOUR_DOMAIN/api/asp/email/cancel-scheduled` | `0.005` |
+| Search Emails | `https://YOUR_DOMAIN/api/asp/email/search` | `0.005` |
 
-Free services (inbox/get, email/get, thread/get, mark-read, archive, delete, list-attachments, mailbox/list) can be registered the same way with no fee. Each submission is reviewed within 24 hours; the result arrives at your Agentic Wallet email and in the agent conversation.
+Free services (template/create, template/list, template/delete, inbox/get, email/get, thread/get, mark-read, archive, delete, list-attachments, mailbox/list) can be registered the same way with no fee. Each submission is reviewed within 24 hours; the result arrives at your Agentic Wallet email and in the agent conversation.
 
 Then set `PAYMENT_REQUIRED=true`, `PAYMENT_WALLET=0x...`, and `OKX_API_KEY` / `OKX_SECRET_KEY` / `OKX_PASSPHRASE` in your Vercel env vars.
 
@@ -391,7 +396,7 @@ The built-in dashboard at `/dashboard` provides full management UI:
 | Analytics | `/dashboard/analytics` | Daily send/receive breakdown per agent |
 | API Keys | `/dashboard/api-keys` | Generate and revoke bearer tokens |
 | Templates | `/dashboard/templates` | Reusable email templates with `{{variables}}` |
-| Settings | `/dashboard/settings` | SendGrid config, OKX.AI wallet |
+| Settings | `/dashboard/settings` | Resend config, OKX.AI ASP endpoints |
 
 ---
 
@@ -402,7 +407,7 @@ The built-in dashboard at `/dashboard` provides full management UI:
 | API and database | Works | Works |
 | Dashboard | Works | Works |
 | A2MCP endpoint | Works | Works |
-| Outbound email | Works (needs SendGrid key) | Works |
+| Outbound email | Works (needs Resend key) | Works |
 | Inbound email | No (needs MX records) | Works |
 | x402 payments | Works (toggle env var) | Works |
 
