@@ -26,6 +26,6 @@ export async function POST(request: NextRequest) {
 
   if (!agent) return NextResponse.json({ error: "Agent not found" }, { status: 404 })
 
-  const result = await sendAgentEmail(agentId, to, subject, emailBody, html, cc, bcc, replyTo)
+  const result = await sendAgentEmail(agentId, to, subject, emailBody, { html, cc, bcc, replyTo })
   return NextResponse.json(result, { status: 201 })
 }

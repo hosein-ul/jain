@@ -28,6 +28,26 @@ export async function validateApiKey(request: NextRequest) {
   return apiKey.user
 }
 
+export async function verifyAgentOwnership(agentId: string, userId: string): Promise<boolean> {
+  const { data } = await supabase
+    .from("Agent")
+    .select("id")
+    .eq("id", agentId)
+    .eq("userId", userId)
+    .maybeSingle()
+  return !!data
+}
+
+export async function verifyEmailOwnership(emailId: string, userId: string): Promise<boolean> {
+  const { data } = await supabase
+    .from("Email")
+    .select("id, agentId, agent:Agent!inner(userId)")
+    .eq("id", emailId)
+    .eq("agent.userId", userId)
+    .maybeSingle()
+  return !!data
+}
+
 export async function getOrCreateDemoUser() {
   const email = "demo@agentmail.dev"
 

@@ -1,5 +1,6 @@
+import { createHmac } from "crypto"
 import { supabase } from "./supabase"
-import { sendEmail, type Attachment } from "./sendgrid"
+import { sendEmail, cancelScheduledEmail, type Attachment } from "./resend"
 import { v4 as uuidv4 } from "uuid"
 
 const EMAIL_DOMAIN = process.env.EMAIL_DOMAIN || "agentmail.dev"
@@ -95,6 +96,7 @@ export async function sendAgentEmail(
     cc?: string | string[]
     bcc?: string | string[]
     replyTo?: string
+    inReplyTo?: string
     attachments?: Attachment[]
     trackOpens?: boolean
     trackClicks?: boolean
@@ -126,6 +128,7 @@ export async function sendAgentEmail(
     cc: opts?.cc,
     bcc: opts?.bcc,
     replyTo: opts?.replyTo,
+    inReplyTo: opts?.inReplyTo,
     attachments: opts?.attachments,
     trackOpens: opts?.trackOpens,
     trackClicks: opts?.trackClicks,
@@ -234,6 +237,11 @@ export async function cancelScheduled(emailId: string) {
   if (!email) throw new Error("Email not found")
   if (email.status !== "scheduled") throw new Error("Email is not scheduled")
 
+  // Cancel in Resend using the provider email ID stored in messageId.
+  if (email.messageId) {
+    await cancelScheduledEmail(email.messageId)
+  }
+
   const { data: updated } = await supabase
     .from("Email")
     .update({ status: "cancelled" })
@@ -328,10 +336,10 @@ export async function replyEmail(
     html: opts?.html,
     cc: opts?.cc,
     replyTo: original.from,
+    inReplyTo: original.messageId ?? undefined,
     attachments: opts?.attachments,
     threadId: original.threadId,
-    inReplyTo: original.messageId,
-  } as any)
+  })
 }
 
 export async function replyAll(emailId: string, body: string, html?: string) {
@@ -470,13 +478,21 @@ export async function receiveEmail(
     })
   }
 
-  // Webhook
+  // Webhook — fire-and-forget with HMAC-SHA256 signature so receivers can verify authenticity.
   if (agent.webhookUrl && email) {
+    const payload = JSON.stringify({ event: "email.received", data: email })
+    const secret = process.env.WEBHOOK_SECRET
+    const sig = secret
+      ? `sha256=${createHmac("sha256", secret).update(payload).digest("hex")}`
+      : undefined
     fetch(agent.webhookUrl, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ event: "email.received", data: email }),
-    }).catch((err) => console.error("Webhook failed:", err))
+      headers: {
+        "Content-Type": "application/json",
+        ...(sig ? { "X-AgentMail-Signature": sig } : {}),
+      },
+      body: payload,
+    }).catch((err) => console.error("[webhook] delivery failed:", agent.webhookUrl, err))
   }
 
   return email

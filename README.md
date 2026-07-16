@@ -26,7 +26,7 @@ research-agent@agentmail.dev  → no shared state with others
                         ┌─────────────────────────────────────┐
                         │            AgentMail                 │
                         │                                      │
-  OKX.AI Agents ───────▶│  POST /api/a2mcp   (x402 payment)  │
+  OKX.AI Agents ───────▶│  POST /api/asp/**  (x402 payment)   │
                         │           │                          │
   REST API clients ────▶│  /api/*   │                          │
                         │           ▼                          │
@@ -56,7 +56,7 @@ research-agent@agentmail.dev  → no shared state with others
 | Framework | Next.js 16 (App Router, TypeScript) |
 | Styling | Tailwind CSS v4 |
 | Database | Supabase (PostgreSQL) |
-| Email delivery | SendGrid (SMTP + inbound parse) |
+| Email delivery | Resend (SMTP + inbound webhooks) |
 | Auth | API key (`am_...` bearer token) |
 | OKX.AI payments | x402 protocol, USDT0 on X Layer |
 
@@ -158,83 +158,104 @@ curl -X POST https://agentmail.dev/api/emails/send \
 
 ---
 
-## OKX.AI A2MCP integration
+## OKX.AI ASP integration
 
-AgentMail is registered as an **A2MCP (Agent-to-MCP)** service on the OKX.AI marketplace. Any agent on OKX.AI can discover and use AgentMail without configuration.
+AgentMail is registered as an **ASP (Agent Service Provider)** on the OKX.AI marketplace. Each action has its own dedicated endpoint — OKX.AI registers one price per endpoint URL.
 
-### How agents discover AgentMail
-
-OKX.AI maintains a registry of ASPs. When registered, agents on the marketplace can call `GET /api/a2mcp` to discover available tools and pricing, then call `POST /api/a2mcp` to use them.
+### Service discovery
 
 ```bash
-# Discovery
-curl https://agentmail.dev/api/a2mcp
+# Returns full manifest with all endpoints and pricing
+curl https://agentmail.dev/api/asp
 ```
 
 ```json
 {
-  "name": "agentmail",
+  "name": "AgentMail",
   "version": "1.0.0",
-  "description": "Real email infrastructure for AI agents",
-  "pricing": "x402 pay-per-call, USDT0 on X Layer",
-  "tools": [
-    { "name": "create_mailbox", "price_usdt0": "0.100" },
-    { "name": "send_email",     "price_usdt0": "0.050" },
-    { "name": "get_inbox",      "price_usdt0": "0.010" },
-    { "name": "get_email",      "price_usdt0": "0.005" },
-    { "name": "reply_email",    "price_usdt0": "0.050" },
-    { "name": "receive_email",  "price_usdt0": "0.000" }
-  ]
+  "description": "Real email infrastructure for AI agents — send, receive, and manage @agentmail.dev mailboxes",
+  "authentication": "Bearer <api_key> in Authorization header",
+  "paymentProtocol": "x402 v2 (USDT0 on X Layer / eip155:196)",
+  "services": [...]
 }
 ```
 
-### Using an action
+### Endpoints & pricing
+
+Each endpoint accepts `POST` with a JSON body. Free endpoints return `200` directly. Paid endpoints require x402 payment — the OKX.AI agent pays automatically.
+
+| Endpoint | Price | Description |
+|---|---|---|
+| `POST /api/asp/mailbox/list` | free | List all agent mailboxes |
+| `POST /api/asp/inbox/get` | free | Fetch inbox with filters |
+| `POST /api/asp/email/get` | free | Get single email + attachments |
+| `POST /api/asp/thread/get` | free | Full conversation thread |
+| `POST /api/asp/email/mark-read` | free | Mark as read |
+| `POST /api/asp/email/mark-unread` | free | Mark as unread |
+| `POST /api/asp/email/archive` | free | Archive email |
+| `POST /api/asp/email/delete` | free | Delete email permanently |
+| `POST /api/asp/email/attachments` | free | List/download attachments |
+| `POST /api/asp/mailbox/create` | **$0.25** | Create new agent mailbox |
+| `POST /api/asp/email/send` | **$0.02** | Send email |
+| `POST /api/asp/template/send` | **$0.02** | Send via template |
+| `POST /api/asp/email/reply` | **$0.01** | Reply to email |
+| `POST /api/asp/email/reply-all` | **$0.01** | Reply all |
+| `POST /api/asp/email/forward` | **$0.01** | Forward email |
+| `POST /api/asp/template/send-bulk` | **$0.05** | Bulk send to many recipients |
+| `POST /api/asp/mailbox/update` | **$0.005** | Update mailbox settings |
+| `POST /api/asp/mailbox/delete` | **$0.005** | Delete mailbox |
+| `POST /api/asp/email/cancel-scheduled` | **$0.005** | Cancel scheduled email |
+| `POST /api/asp/email/search` | **$0.005** | Full-text search emails |
+
+### Example: create a mailbox
 
 ```bash
-curl -X POST https://agentmail.dev/api/a2mcp \
-  -H "X-PAYMENT: <x402-proof>" \
-  -d '{ "action": "create_mailbox", "params": { "agent_name": "trading-bot" } }'
+curl -X POST https://agentmail.dev/api/asp/mailbox/create \
+  -H "Authorization: Bearer am_your_key" \
+  -H "PAYMENT-SIGNATURE: <x402-proof>" \
+  -H "Content-Type: application/json" \
+  -d '{ "name": "trading-bot", "displayName": "Trading Bot" }'
 ```
 
 ```json
 {
-  "email": "trading-bot@agentmail.dev",
-  "agent_id": "agt_01j8...",
-  "api_key": "am_abc123..."
+  "mailbox": {
+    "id": "agt_01j8...",
+    "emailAddress": "trading-bot@agentmail.dev",
+    "name": "trading-bot"
+  }
 }
 ```
 
-### Available actions
+### Example: send an email
 
-| Action | Description | Price |
-|---|---|---|
-| `create_mailbox` | Provision a new agent email address | 0.100 USDT0 |
-| `send_email` | Send email from an agent | 0.050 USDT0 |
-| `get_inbox` | List emails in an agent's inbox | 0.010 USDT0 |
-| `get_email` | Retrieve a single email by ID | 0.005 USDT0 |
-| `reply_email` | Reply to an existing email thread | 0.050 USDT0 |
-| `receive_email` | Deliver an inbound email (webhook use) | free |
-
-### x402 pay-per-call
-
-When `PAYMENT_REQUIRED=true`, the endpoint returns HTTP 402 before any call that has a price:
-
-```json
-{
-  "x402Version": 1,
-  "accepts": [{
-    "scheme": "exact",
-    "network": "xlayer-mainnet",
-    "maxAmountRequired": "100000",
-    "asset": "0x74b7f16337b8972027f6196a17a631ac6dE26d22",
-    "payToAddress": "0xYourWalletAddress",
-    "maxTimeoutSeconds": 300,
-    "description": "AgentMail: create_mailbox — 0.100 USDT0"
-  }]
-}
+```bash
+curl -X POST https://agentmail.dev/api/asp/email/send \
+  -H "Authorization: Bearer am_your_key" \
+  -H "PAYMENT-SIGNATURE: <x402-proof>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "agentId": "agt_01j8...",
+    "to": "user@example.com",
+    "subject": "Hello from AgentMail",
+    "body": "This email was sent by an AI agent."
+  }'
 ```
 
-The OKX.AI Payment SDK intercepts the 402, makes the on-chain payment, and retries the request with `X-PAYMENT` proof. This is fully transparent to the agent.
+### x402 v2 pay-per-call
+
+When `PAYMENT_REQUIRED=true`, each paid endpoint returns HTTP 402 if no payment proof is included:
+
+```http
+HTTP/1.1 402 Payment Required
+PAYMENT-REQUIRED: <base64-encoded-challenge>
+Content-Type: application/json
+```
+
+The OKX.AI runtime intercepts the 402, makes the on-chain USDT0 payment on X Layer (`eip155:196`), and retries the request with a `PAYMENT-SIGNATURE` header (the x402 v2 proof; `X-PAYMENT` is the legacy v1 header). On success the endpoint returns `200` with a `PAYMENT-RESPONSE` header carrying the settlement result. This is fully transparent to the agent — no manual payment handling needed.
+
+**Network:** X Layer Mainnet (`eip155:196`)  
+**Token:** USDT0 (`0x779ded0c9e1022225f8e0630b35a9b54be713736`)
 
 ---
 
@@ -245,21 +266,23 @@ The OKX.AI Payment SDK intercepts the 402, makes the on-chain payment, and retri
 ```
 Agent → POST /api/emails/send
     → email-service.sendAgentEmail()
-    → sendgrid.sendEmail()          ← real SMTP via SendGrid
+    → resend.sendEmail()            ← real SMTP via Resend
     → Stored in Supabase            ← direction: "outbound", status: "sent"
 ```
 
 ### Inbound (the world → agent)
 
 ```
-Email arrives at trading-bot@agentmail.dev
-    → SendGrid Inbound Parse (MX record required)
-    → POST /api/webhooks/inbound
+Email arrives at trading-bot@yourdomain.com
+    → Resend receives it (MX record required)
+    → POST /api/webhooks/inbound    ← event: email.received (metadata only)
+        → verifyWebhook()           ← Svix signature check
+        → resend.getReceivedEmail() ← fetch full body (text/html) from Resend API
     → email-service.receiveEmail()
         ├─ Looks up Agent by emailAddress (UNIQUE index)
         ├─ Thread detection: matches existing threadId (same from/to pair)
         ├─ Stores email in Supabase   ← direction: "inbound"
-        └─ If webhookUrl set: fires POST to agent's webhook
+        └─ If webhookUrl set: fires POST to agent's webhook (HMAC-signed)
 ```
 
 ---
@@ -290,8 +313,9 @@ cp .env.example .env
 |---|---|---|
 | `NEXT_PUBLIC_SUPABASE_URL` | Yes | Supabase project URL |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Yes | Supabase anon key |
-| `SENDGRID_API_KEY` | For real email | SendGrid API key |
-| `EMAIL_DOMAIN` | Yes | Your verified domain (e.g. `agentmail.dev`) |
+| `RESEND_API_KEY` | For real email | Resend API key |
+| `RESEND_WEBHOOK_SECRET` | For inbound email | Signing secret from Resend › Webhooks |
+| `EMAIL_DOMAIN` | Yes | Your verified domain (e.g. `yourdomain.com`) |
 | `PAYMENT_REQUIRED` | OKX.AI | `"true"` to enforce x402 payments |
 | `PAYMENT_WALLET` | OKX.AI | EVM wallet on X Layer to receive USDT0 |
 
@@ -301,15 +325,18 @@ cp .env.example .env
 npm run dev   # http://localhost:3000
 ```
 
-Without `SENDGRID_API_KEY`, emails are logged to console (dev mode). The database, API, dashboard, and A2MCP endpoint work fully.
+Without `RESEND_API_KEY`, emails are logged to console (dev mode). The database, API, dashboard, and ASP endpoints work fully.
 
-### 4. Configure SendGrid for real email
+### 4. Configure Resend for real email
 
-1. Verify your domain in SendGrid → Sender Authentication
-2. Add DNS records:
-   - `MX agentmail.dev mx.sendgrid.net 10`
-   - DKIM, SPF, DMARC records from SendGrid
-3. Enable Inbound Parse: route `agentmail.dev` → `https://agentmail.dev/api/webhooks/inbound`
+1. Add your domain in Resend → Domains and verify DNS
+2. Add DNS records provided by Resend:
+   - MX record pointing to Resend's inbound servers
+   - DKIM, SPF, DMARC records
+3. Add a webhook in Resend → Webhooks:
+   - URL: `https://yourdomain.com/api/webhooks/inbound`
+   - Events: `email.received`
+   - Copy the signing secret → set `RESEND_WEBHOOK_SECRET`
 
 ### 5. Deploy to Vercel
 
@@ -322,11 +349,33 @@ Set all env variables in the Vercel dashboard.
 
 ### 6. Register on OKX.AI
 
-```bash
-npx @okxai/skills add --endpoint https://agentmail.dev/api/a2mcp
-```
+Registration happens **in conversation with the OKX.AI agent** (not a web form or CLI flag). You register once as an **ASP** (role `asp`) with a name, description, and avatar, then add one **A2MCP service per endpoint**. For each service you provide:
 
-Then set `PAYMENT_REQUIRED=true` and `PAYMENT_WALLET=0x...` in production.
+- **Service name** — a 5–30 char noun phrase (e.g. "Create Agent Mailbox"), not the ASP name, no price in the name
+- **Description** — two parts: ① what it does + who it's for, ② what the caller must supply (e.g. "1. agent name")
+- **Type** — `A2MCP` (API service)
+- **Fee** — a bare number in **USDT**, digits only, no `$`/symbol/unit (e.g. `0.25`). Free services omit the fee.
+- **Endpoint** — a public `https://` URL (permanent on-chain; localhost/http rejected)
+
+The paid services to register (fee is USDT; the on-chain asset is USDT0 on X Layer):
+
+| Service | Endpoint | Fee (USDT) |
+|---|---|---|
+| Create Agent Mailbox | `https://agentmail.dev/api/asp/mailbox/create` | `0.25` |
+| Send Email | `https://agentmail.dev/api/asp/email/send` | `0.02` |
+| Send Templated Email | `https://agentmail.dev/api/asp/template/send` | `0.02` |
+| Reply to Email | `https://agentmail.dev/api/asp/email/reply` | `0.01` |
+| Reply All | `https://agentmail.dev/api/asp/email/reply-all` | `0.01` |
+| Forward Email | `https://agentmail.dev/api/asp/email/forward` | `0.01` |
+| Bulk Template Send | `https://agentmail.dev/api/asp/template/send-bulk` | `0.05` |
+| Update Mailbox | `https://agentmail.dev/api/asp/mailbox/update` | `0.005` |
+| Delete Mailbox | `https://agentmail.dev/api/asp/mailbox/delete` | `0.005` |
+| Cancel Scheduled Email | `https://agentmail.dev/api/asp/email/cancel-scheduled` | `0.005` |
+| Search Emails | `https://agentmail.dev/api/asp/email/search` | `0.005` |
+
+Free services (inbox/get, email/get, thread/get, mark-read, archive, delete, list-attachments, mailbox/list) can be registered the same way with no fee. Each submission is reviewed within 24 hours; the result arrives at your Agentic Wallet email and in the agent conversation.
+
+Then set `PAYMENT_REQUIRED=true`, `PAYMENT_WALLET=0x...`, and `OKX_API_KEY` / `OKX_SECRET_KEY` / `OKX_PASSPHRASE` in your Vercel env vars.
 
 ---
 
