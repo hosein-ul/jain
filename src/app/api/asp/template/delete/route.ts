@@ -2,12 +2,13 @@
 import { getUserFromOkxHeader } from "@/lib/auth"
 import { supabase } from "@/lib/supabase"
 import { createFreeRoute } from "@/lib/asp-route"
+import { safeJson } from "@/lib/asp-hints"
 
 export const POST = createFreeRoute(async (req: NextRequest) => {
   const user = await getUserFromOkxHeader(req)
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
-  const body = await req.json()
+  const body = await safeJson(req)
   const { templateId } = body
 
   if (!templateId) return NextResponse.json({ error: "templateId is required" }, { status: 400 })

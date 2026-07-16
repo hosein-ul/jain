@@ -2,6 +2,7 @@
 import { getUserFromOkxHeader } from "@/lib/auth"
 import { cancelScheduled } from "@/lib/email-service"
 import { createPaidRoute } from "@/lib/asp-route"
+import { safeJson } from "@/lib/asp-hints"
 
 export const POST = createPaidRoute(
   "/api/asp/email/cancel-scheduled",
@@ -11,7 +12,7 @@ export const POST = createPaidRoute(
     const user = await getUserFromOkxHeader(req)
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
-    const body = await req.json()
+    const body = await safeJson(req)
     const { emailId } = body
 
     if (!emailId) return NextResponse.json({ error: "emailId is required" }, { status: 400 })

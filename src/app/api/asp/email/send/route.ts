@@ -2,6 +2,7 @@
 import { getUserFromOkxHeader, verifyAgentOwnership } from "@/lib/auth"
 import { sendAgentEmail } from "@/lib/email-service"
 import { createPaidRoute } from "@/lib/asp-route"
+import { safeJson } from "@/lib/asp-hints"
 
 export const POST = createPaidRoute(
   "/api/asp/email/send",
@@ -11,7 +12,7 @@ export const POST = createPaidRoute(
     const user = await getUserFromOkxHeader(req)
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
-    const body = await req.json()
+    const body = await safeJson(req)
     const {
       agentId, to, subject, body: emailBody, html,
       cc, bcc, replyTo, attachments, trackOpens, trackClicks, scheduledAt, threadId,
@@ -31,6 +32,11 @@ export const POST = createPaidRoute(
       threadId,
     })
 
-    return NextResponse.json(result, { status: 201 })
+    return NextResponse.json({
+      ...result,
+      hint: {
+        next: "Save email.id and email.threadId — the recipient's reply will arrive on the same thread. Use POST /api/asp/inbox/get with {agentId, filter:{unread:true}} to fetch it, or configure a webhook via mailbox/update.",
+      },
+    }, { status: 201 })
   }
 )

@@ -2,6 +2,7 @@
 import { getUserFromOkxHeader } from "@/lib/auth"
 import { replyEmail } from "@/lib/email-service"
 import { createPaidRoute } from "@/lib/asp-route"
+import { safeJson } from "@/lib/asp-hints"
 
 export const POST = createPaidRoute(
   "/api/asp/email/reply",
@@ -11,7 +12,7 @@ export const POST = createPaidRoute(
     const user = await getUserFromOkxHeader(req)
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
-    const body = await req.json()
+    const body = await safeJson(req)
     const { emailId, body: replyBody, html, cc, attachments } = body
 
     if (!emailId || !replyBody) {
@@ -19,6 +20,9 @@ export const POST = createPaidRoute(
     }
 
     const result = await replyEmail(emailId, replyBody, { html, cc, attachments })
-    return NextResponse.json(result, { status: 201 })
+    return NextResponse.json({
+      ...result,
+      hint: { next: "Your reply is on the same thread as the original. Poll inbox/get with filter:{unread:true} for their next response." },
+    }, { status: 201 })
   }
 )

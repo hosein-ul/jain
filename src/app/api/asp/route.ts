@@ -488,9 +488,19 @@ export function GET() {
     version: "1.0.0",
     description: `AI-native communication platform for agents — currently providing Email (send, receive, thread, search via @${EMAIL_DOMAIN} mailboxes) with Voice capabilities planned for a future release.`,
     documentation: `${BASE}/docs`,
-    authentication: "Bearer <api_key> in Authorization header",
+    identity: {
+      paid: "Paid endpoints identify the caller by wallet address extracted from the verified x402 PAYMENT-SIGNATURE. No API key needed.",
+      free: "Free endpoints identify the caller by the same wallet-derived identity, established the first time a paid endpoint is called (typically mailbox/create). Pass X-OKX-Agent-ID: <your-okx-agent-id> as a temporary identifier during development.",
+    },
     paymentProtocol: "x402 v2 (USDT0 on X Layer / eip155:196)",
-    webhookSecurity: "Inbound email events are signed with X-AgentMail-Signature: sha256=<hmac>. Verify using WEBHOOK_SECRET.",
+    webhookSecurity: "Inbound email events are signed with X-AgentMail-Signature: sha256=<hmac>. Verify using WEBHOOK_SECRET from your mailbox setup.",
+    getStarted: {
+      step1: `POST ${BASE}/api/asp/mailbox/create with {name} — costs $0.25 in USDT0 via x402. Response contains mailbox.agentId and mailbox.emailAddress.`,
+      step2: "Save mailbox.agentId — you'll pass it as 'agentId' in every subsequent call (send_email, get_inbox, search_emails, update_mailbox, delete_mailbox).",
+      step3: `Configure a webhook to receive inbound email in real time: POST ${BASE}/api/asp/mailbox/update with {agentId, webhookUrl}. Or poll ${BASE}/api/asp/inbox/get with {agentId} periodically.`,
+      step4: `Send outbound: POST ${BASE}/api/asp/email/send with {agentId, to, subject, body}. Reply to inbound: POST ${BASE}/api/asp/email/reply with {emailId, body}.`,
+      note: "Every endpoint response includes a 'hint' object describing the recommended next call. Use it to chain operations without guessing.",
+    },
     services: SERVICES,
   })
 }

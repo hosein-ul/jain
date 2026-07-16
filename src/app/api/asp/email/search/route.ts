@@ -2,6 +2,7 @@
 import { getUserFromOkxHeader, verifyAgentOwnership } from "@/lib/auth"
 import { searchEmails } from "@/lib/email-service"
 import { createPaidRoute } from "@/lib/asp-route"
+import { safeJson } from "@/lib/asp-hints"
 
 export const POST = createPaidRoute(
   "/api/asp/email/search",
@@ -11,7 +12,7 @@ export const POST = createPaidRoute(
     const user = await getUserFromOkxHeader(req)
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
-    const body = await req.json()
+    const body = await safeJson(req)
     const { agentId, query, limit = 20 } = body
 
     if (!agentId || !query) {
