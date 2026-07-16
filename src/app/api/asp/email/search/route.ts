@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from "next/server"
-import { validateApiKey, getOrCreateDemoUser, verifyAgentOwnership } from "@/lib/auth"
+﻿import { NextRequest, NextResponse } from "next/server"
+import { getUserFromOkxHeader, verifyAgentOwnership } from "@/lib/auth"
 import { searchEmails } from "@/lib/email-service"
 import { createPaidRoute } from "@/lib/asp-route"
 
@@ -8,7 +8,7 @@ export const POST = createPaidRoute(
   "$0.005",
   "Full-text search across an agent's emails by subject, body, or sender",
   async (req: NextRequest) => {
-    const user = (await validateApiKey(req)) ?? (await getOrCreateDemoUser())
+    const user = await getUserFromOkxHeader(req)
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
     const body = await req.json()

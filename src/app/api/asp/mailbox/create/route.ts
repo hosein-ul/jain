@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from "next/server"
-import { validateApiKey, getOrCreateDemoUser } from "@/lib/auth"
+﻿import { NextRequest, NextResponse } from "next/server"
+import { getUserFromOkxHeader } from "@/lib/auth"
 import { createAgent } from "@/lib/email-service"
 import { createPaidRoute } from "@/lib/asp-route"
 
@@ -10,7 +10,7 @@ export const POST = createPaidRoute(
   "$0.25",
   `Create a new agent mailbox with a unique @${EMAIL_DOMAIN} email address`,
   async (req: NextRequest) => {
-    const user = (await validateApiKey(req)) ?? (await getOrCreateDemoUser())
+    const user = await getUserFromOkxHeader(req)
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
     const body = await req.json()

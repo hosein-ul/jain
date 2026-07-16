@@ -67,3 +67,31 @@ export async function getOrCreateDemoUser() {
 
   return created
 }
+
+export async function getOrCreateUserByOkxId(okxAgentId: string | null | undefined) {
+  if (!okxAgentId) return null
+
+  const id = String(okxAgentId).trim()
+  if (!id) return null
+
+  const { data: existing } = await supabase
+    .from("User")
+    .select("*")
+    .eq("okxAgentId", id)
+    .maybeSingle()
+
+  if (existing) return existing
+
+  const { data: created } = await supabase
+    .from("User")
+    .insert({ email: `okx-agent-${id}@agentmail.dev`, name: `OKX Agent #${id}`, okxAgentId: id })
+    .select()
+    .single()
+
+  return created
+}
+
+export async function getUserFromOkxHeader(req: NextRequest) {
+  const id = req.headers.get("x-okx-agent-id")
+  return getOrCreateUserByOkxId(id)
+}

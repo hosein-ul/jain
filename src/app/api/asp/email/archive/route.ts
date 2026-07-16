@@ -1,10 +1,10 @@
-import { NextRequest, NextResponse } from "next/server"
-import { validateApiKey, getOrCreateDemoUser } from "@/lib/auth"
+﻿import { NextRequest, NextResponse } from "next/server"
+import { getUserFromOkxHeader } from "@/lib/auth"
 import { archiveEmail } from "@/lib/email-service"
 import { createFreeRoute } from "@/lib/asp-route"
 
 export const POST = createFreeRoute(async (req: NextRequest) => {
-  const user = (await validateApiKey(req)) ?? (await getOrCreateDemoUser())
+  const user = await getUserFromOkxHeader(req)
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
   const body = await req.json()
