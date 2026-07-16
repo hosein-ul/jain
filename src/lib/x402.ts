@@ -51,7 +51,7 @@ export interface PaymentConfig {
 export type PaymentResult =
   | { status: "free" }                                   // payment disabled / dev mode → proceed
   | { status: "required"; response: NextResponse }       // 402 — caller returns this
-  | { status: "paid"; settlementHeader?: string }        // verified + settled → proceed
+  | { status: "paid"; settlementHeader?: string; payer?: string }  // verified + settled → proceed
 
 // Enforce x402 payment for a paid endpoint.
 export async function requirePayment(
@@ -123,7 +123,8 @@ export async function requirePayment(
     // Settle, then hand back the result so the route can emit PAYMENT-RESPONSE on the 200.
     const settlement = await server.settlePayment(payload, matched)
     const settlementHeader = Buffer.from(JSON.stringify(settlement)).toString("base64")
-    return { status: "paid", settlementHeader }
+    const payer = (settlement as { payer?: string }).payer ?? (verification as { payer?: string }).payer
+    return { status: "paid", settlementHeader, payer }
   } catch (err) {
     console.error("[x402] Verification/settlement error:", err)
     return {

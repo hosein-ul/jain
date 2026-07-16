@@ -4,12 +4,13 @@ import { requirePayment } from "./x402"
 const APP_URL = process.env.APP_URL || process.env.NEXT_PUBLIC_APP_URL || "https://zerolayer.online"
 
 export type Handler = (req: NextRequest) => Promise<NextResponse>
+export type PaidHandler = (req: NextRequest, ctx: { payer?: string }) => Promise<NextResponse>
 
 export function createPaidRoute(
-  path: string,     // e.g. "/api/asp/mailbox/create"
-  price: string,    // e.g. "$0.25"
+  path: string,
+  price: string,
   description: string,
-  handler: Handler
+  handler: PaidHandler
 ) {
   return async function POST(req: NextRequest) {
     const payment = await requirePayment(req, {
@@ -20,9 +21,9 @@ export function createPaidRoute(
 
     if (payment.status === "required") return payment.response
 
-    const res = await handler(req)
+    const payer = payment.status === "paid" ? payment.payer : undefined
+    const res = await handler(req, { payer })
 
-    // x402 v2: surface the settlement result to the buyer via PAYMENT-RESPONSE.
     if (payment.status === "paid" && payment.settlementHeader) {
       res.headers.set("PAYMENT-RESPONSE", payment.settlementHeader)
     }

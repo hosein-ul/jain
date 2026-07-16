@@ -1,4 +1,15 @@
 import { NextRequest, NextResponse } from "next/server"
+import { getOrCreateUserByWallet, getRequestUser } from "./auth"
+
+// Resolve the calling agent's identity for a PAID endpoint.
+// Priority: (1) wallet from verified x402 payment proof, (2) session token / dev headers.
+export async function resolvePaidUser(req: NextRequest, payer: string | undefined) {
+  if (payer) {
+    const user = await getOrCreateUserByWallet(payer)
+    if (user) return user
+  }
+  return getRequestUser(req)
+}
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function safeJson(req: NextRequest): Promise<any> {

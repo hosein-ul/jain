@@ -1,15 +1,15 @@
 ﻿import { NextRequest, NextResponse } from "next/server"
-import { getUserFromOkxHeader } from "@/lib/auth"
+import { } from "@/lib/auth"
 import { replyAll } from "@/lib/email-service"
 import { createPaidRoute } from "@/lib/asp-route"
-import { safeJson } from "@/lib/asp-hints"
+import { safeJson, resolvePaidUser } from "@/lib/asp-hints"
 
 export const POST = createPaidRoute(
   "/api/asp/email/reply-all",
   "$0.01",
   "Reply to all recipients of an email thread",
-  async (req: NextRequest) => {
-    const user = await getUserFromOkxHeader(req)
+  async (req: NextRequest, { payer }) => {
+    const user = await resolvePaidUser(req, payer)
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
     const body = await safeJson(req)
