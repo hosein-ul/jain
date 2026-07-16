@@ -1,8 +1,8 @@
 # AgentMail
 
-Real email infrastructure for AI agents. Give any agent its own `@agentmail.dev` address — send, receive, and manage email through a single REST API.
+Real email infrastructure for AI agents. Give any agent its own dedicated email address — send, receive, and manage email through a single REST API.
 
-Built as an **ASP (Agent Service Provider)** for the [OKX.AI Genesis Hackathon 2026](https://web3.okx.com/onchainos).
+Built as an **ASP (Agent Service Provider)** on OKX.AI.
 
 ---
 
@@ -13,9 +13,9 @@ AI agents need to communicate via email — to send alerts, receive confirmation
 Every agent gets their own exclusive mailbox. Emails never cross between agents.
 
 ```
-trading-bot@agentmail.dev     → isolated inbox, send/receive
-customer-agent@agentmail.dev  → completely separate mailbox
-research-agent@agentmail.dev  → no shared state with others
+trading-bot@yourdomain.com     → isolated inbox, send/receive
+customer-agent@yourdomain.com  → completely separate mailbox
+research-agent@yourdomain.com  → no shared state with others
 ```
 
 ---
@@ -118,7 +118,7 @@ curl -X POST https://YOUR_DOMAIN/api/agents \
 {
   "id": "agt_01j8...",
   "name": "trading-bot",
-  "emailAddress": "trading-bot@agentmail.dev",
+  "emailAddress": "trading-bot@yourdomain.com",
   "isActive": true
 }
 ```
@@ -173,7 +173,7 @@ curl https://YOUR_DOMAIN/api/asp
 {
   "name": "AgentMail",
   "version": "1.0.0",
-  "description": "Real email infrastructure for AI agents — send, receive, and manage @agentmail.dev mailboxes",
+  "description": "Real email infrastructure for AI agents — send, receive, and manage agent mailboxes on your domain",
   "authentication": "Bearer <api_key> in Authorization header",
   "paymentProtocol": "x402 v2 (USDT0 on X Layer / eip155:196)",
   "services": [...]
@@ -224,7 +224,7 @@ curl -X POST https://YOUR_DOMAIN/api/asp/mailbox/create \
 {
   "mailbox": {
     "id": "agt_01j8...",
-    "emailAddress": "trading-bot@agentmail.dev",
+    "emailAddress": "trading-bot@yourdomain.com",
     "name": "trading-bot"
   }
 }
