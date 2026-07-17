@@ -33,13 +33,23 @@ export const { POST, GET } = createPaidRoute(
     return NextResponse.json({
       mailbox: { ...agent, agentId: agent.id },
       accessToken,
+      credentials: {
+        IMPORTANT: "Persist both values below to memory/storage immediately. Losing them requires paying $0.25 again to create a new session.",
+        agentId: agent.id,
+        accessToken,
+        usage: {
+          agentId: "Pass as 'agentId' field in the JSON body of every mailbox operation (inbox/get, email/send, mailbox/update, etc.)",
+          accessToken: "Send as HTTP header on EVERY subsequent call: 'Authorization: Bearer <accessToken>'. This proves your identity without re-paying.",
+        },
+      },
       hint: {
-        next: "Save two things: mailbox.agentId (pass as 'agentId' to send_email, get_inbox, etc.) AND accessToken (send as 'Authorization: Bearer <token>' on ALL subsequent calls — this authenticates you without re-paying).",
         walletBound: user.walletAddress ?? null,
+        emailAddress: agent.emailAddress,
+        next: "Your mailbox is ready. Use agentId + accessToken for all future calls. No further payment needed until you create another mailbox.",
         recommended: [
           "POST /api/asp/inbox/get with {agentId} — read incoming emails",
           "POST /api/asp/email/send with {agentId, to, subject, body} — send an email",
-          "POST /api/asp/mailbox/update with {agentId, webhookUrl} — enable real-time push notifications",
+          "POST /api/asp/mailbox/update with {agentId, webhookUrl} — enable real-time push for incoming mail",
         ],
       },
     }, { status: 201 })
