@@ -4,7 +4,7 @@ import { deleteAgent } from "@/lib/email-service"
 import { createPaidRoute } from "@/lib/asp-route"
 import { safeJson, resolvePaidUser } from "@/lib/asp-hints"
 
-export const POST = createPaidRoute(
+export const { POST, GET } = createPaidRoute(
   "/api/asp/mailbox/delete",
   "$0.005",
   "Permanently delete an agent mailbox and all its emails",

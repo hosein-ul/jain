@@ -4,7 +4,7 @@ import { sendBulk } from "@/lib/email-service"
 import { createPaidRoute } from "@/lib/asp-route"
 import { safeJson, resolvePaidUser } from "@/lib/asp-hints"
 
-export const POST = createPaidRoute(
+export const { POST, GET } = createPaidRoute(
   "/api/asp/template/send-bulk",
   "$0.05",
   "Send a template email to multiple recipients with per-recipient variable substitution",

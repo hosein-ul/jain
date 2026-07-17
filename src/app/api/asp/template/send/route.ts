@@ -4,7 +4,7 @@ import { sendTemplate } from "@/lib/email-service"
 import { createPaidRoute } from "@/lib/asp-route"
 import { safeJson, resolvePaidUser } from "@/lib/asp-hints"
 
-export const POST = createPaidRoute(
+export const { POST, GET } = createPaidRoute(
   "/api/asp/template/send",
   "$0.02",
   "Send an email using a saved template with variable substitution",

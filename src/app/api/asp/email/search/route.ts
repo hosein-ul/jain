@@ -4,7 +4,7 @@ import { searchEmails } from "@/lib/email-service"
 import { createPaidRoute } from "@/lib/asp-route"
 import { safeJson, resolvePaidUser } from "@/lib/asp-hints"
 
-export const POST = createPaidRoute(
+export const { POST, GET } = createPaidRoute(
   "/api/asp/email/search",
   "$0.005",
   "Full-text search across an agent's emails by subject, body, or sender",

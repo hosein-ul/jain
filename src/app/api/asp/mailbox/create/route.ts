@@ -6,7 +6,7 @@ import { safeJson, resolvePaidUser } from "@/lib/asp-hints"
 
 const EMAIL_DOMAIN = process.env.EMAIL_DOMAIN || "zerolayer.online"
 
-export const POST = createPaidRoute(
+export const { POST, GET } = createPaidRoute(
   "/api/asp/mailbox/create",
   "$0.25",
   `Create a new agent mailbox with a unique @${EMAIL_DOMAIN} email address`,

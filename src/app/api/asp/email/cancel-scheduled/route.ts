@@ -4,7 +4,7 @@ import { cancelScheduled } from "@/lib/email-service"
 import { createPaidRoute } from "@/lib/asp-route"
 import { safeJson, resolvePaidUser } from "@/lib/asp-hints"
 
-export const POST = createPaidRoute(
+export const { POST, GET } = createPaidRoute(
   "/api/asp/email/cancel-scheduled",
   "$0.005",
   "Cancel a previously scheduled email before it is sent",

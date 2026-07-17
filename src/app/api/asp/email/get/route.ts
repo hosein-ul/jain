@@ -4,7 +4,7 @@ import { supabase } from "@/lib/supabase"
 import { createFreeRoute } from "@/lib/asp-route"
 import { safeJson } from "@/lib/asp-hints"
 
-export const POST = createFreeRoute(async (req: NextRequest) => {
+export const { POST, GET } = createFreeRoute("/api/asp/email/get", "Fetch a single email by ID including its attachments", async (req: NextRequest) => {
   const user = await getUserFromOkxHeader(req)
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 

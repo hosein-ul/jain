@@ -4,7 +4,7 @@ import { updateAgent } from "@/lib/email-service"
 import { createPaidRoute } from "@/lib/asp-route"
 import { safeJson, resolvePaidUser } from "@/lib/asp-hints"
 
-export const POST = createPaidRoute(
+export const { POST, GET } = createPaidRoute(
   "/api/asp/mailbox/update",
   "$0.005",
   "Update mailbox settings: display name, signature, auto-reply, webhook, or active status",

@@ -4,7 +4,7 @@ import { sendAgentEmail } from "@/lib/email-service"
 import { createPaidRoute } from "@/lib/asp-route"
 import { safeJson, resolvePaidUser } from "@/lib/asp-hints"
 
-export const POST = createPaidRoute(
+export const { POST, GET } = createPaidRoute(
   "/api/asp/email/send",
   "$0.02",
   "Send an email from an agent mailbox to any recipient",

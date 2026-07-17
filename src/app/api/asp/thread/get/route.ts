@@ -4,7 +4,7 @@ import { getThread } from "@/lib/email-service"
 import { createFreeRoute } from "@/lib/asp-route"
 import { safeJson } from "@/lib/asp-hints"
 
-export const POST = createFreeRoute(async (req: NextRequest) => {
+export const { POST, GET } = createFreeRoute("/api/asp/thread/get", "Fetch all emails in a conversation thread in chronological order", async (req: NextRequest) => {
   const user = await getUserFromOkxHeader(req)
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 

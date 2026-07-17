@@ -4,7 +4,7 @@ import { forwardEmail } from "@/lib/email-service"
 import { createPaidRoute } from "@/lib/asp-route"
 import { safeJson, resolvePaidUser } from "@/lib/asp-hints"
 
-export const POST = createPaidRoute(
+export const { POST, GET } = createPaidRoute(
   "/api/asp/email/forward",
   "$0.01",
   "Forward an email to one or more recipients, including original attachments",

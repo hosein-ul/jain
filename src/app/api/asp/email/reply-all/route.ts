@@ -4,7 +4,7 @@ import { replyAll } from "@/lib/email-service"
 import { createPaidRoute } from "@/lib/asp-route"
 import { safeJson, resolvePaidUser } from "@/lib/asp-hints"
 
-export const POST = createPaidRoute(
+export const { POST, GET } = createPaidRoute(
   "/api/asp/email/reply-all",
   "$0.01",
   "Reply to all recipients of an email thread",
