@@ -2,7 +2,7 @@
 import { } from "@/lib/auth"
 import { updateAgent } from "@/lib/email-service"
 import { createPaidRoute } from "@/lib/asp-route"
-import { safeJson, resolvePaidUser } from "@/lib/asp-hints"
+import { safeJson, resolvePaidUser, unauthorizedError, notFoundError } from "@/lib/asp-hints"
 
 export const { POST, GET } = createPaidRoute(
   "/api/asp/mailbox/update",
@@ -10,7 +10,7 @@ export const { POST, GET } = createPaidRoute(
   "Update mailbox settings: display name, signature, auto-reply, webhook, or active status",
   async (req: NextRequest, { payer }) => {
     const user = await resolvePaidUser(req, payer)
-    if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    if (!user) return unauthorizedError("email")
 
     const body = await safeJson(req)
     const { agentId, displayName, signature, autoReply, autoReplyActive, webhookUrl, isActive } = body
@@ -20,7 +20,7 @@ export const { POST, GET } = createPaidRoute(
     const agent = await updateAgent(agentId, user.id, {
       displayName, signature, autoReply, autoReplyActive, webhookUrl, isActive,
     })
-    if (!agent) return NextResponse.json({ error: "Mailbox not found" }, { status: 404 })
+    if (!agent) return notFoundError("mailbox", "This agentId doesn't exist under your tenant. POST /api/asp/mailbox/list to see ids you own.")
 
     return NextResponse.json({ mailbox: agent })
   }

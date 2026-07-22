@@ -2,7 +2,7 @@
 import { } from "@/lib/auth"
 import { deleteAgent } from "@/lib/email-service"
 import { createPaidRoute } from "@/lib/asp-route"
-import { safeJson, resolvePaidUser } from "@/lib/asp-hints"
+import { safeJson, resolvePaidUser, unauthorizedError, notFoundError } from "@/lib/asp-hints"
 
 export const { POST, GET } = createPaidRoute(
   "/api/asp/mailbox/delete",
@@ -10,7 +10,7 @@ export const { POST, GET } = createPaidRoute(
   "Permanently delete an agent mailbox and all its emails",
   async (req: NextRequest, { payer }) => {
     const user = await resolvePaidUser(req, payer)
-    if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    if (!user) return unauthorizedError("email")
 
     const body = await safeJson(req)
     const { agentId } = body
@@ -18,7 +18,7 @@ export const { POST, GET } = createPaidRoute(
     if (!agentId) return NextResponse.json({ error: "agentId is required" }, { status: 400 })
 
     const ok = await deleteAgent(agentId, user.id)
-    if (!ok) return NextResponse.json({ error: "Mailbox not found" }, { status: 404 })
+    if (!ok) return notFoundError("mailbox", "This agentId doesn't exist under your tenant. POST /api/asp/mailbox/list to see ids you own.")
 
     return NextResponse.json({ deleted: true })
   }

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { EMAIL_GUIDE, PHONE_GUIDE, DOMAIN_GUIDE, humanIdentityDocs } from "@/lib/asp-manifest"
 
 const EMAIL_DOMAIN = process.env.EMAIL_DOMAIN || "zerolayer.online"
 const BASE = process.env.APP_URL || process.env.NEXT_PUBLIC_APP_URL || "https://zerolayer.online"
@@ -480,29 +481,272 @@ const SERVICES = [
     },
     output: { type: "object", properties: { deleted: { type: "boolean" } } },
   },
+
+  // ═════════════════════════════════════════════════════════════════════════
+  // ═ PHONE  ════════════════════════════════════════════════════════════════
+  // ═════════════════════════════════════════════════════════════════════════
+
+  {
+    name: "list_phone_numbers",
+    endpoint: `${BASE}/api/asp/phone/numbers`,
+    price: "free",
+    description: "List all phone numbers owned by the authenticated tenant",
+    input: { type: "object", properties: {} },
+    output: { type: "object", properties: { numbers: { type: "array" } } },
+  },
+  {
+    name: "get_call",
+    endpoint: `${BASE}/api/asp/phone/calls/get`,
+    price: "free",
+    description: "Get a call by id (status, direction, duration, recording URL if available)",
+    input: { type: "object", required: ["callId"], properties: { callId: { type: "string" } } },
+    output: { type: "object", properties: { call: { type: "object" } } },
+  },
+  {
+    name: "get_transcript",
+    endpoint: `${BASE}/api/asp/phone/calls/transcript`,
+    price: "free",
+    description: "Get the STT transcript of a completed call",
+    input: { type: "object", required: ["callId"], properties: { callId: { type: "string" } } },
+    output: { type: "object", properties: { transcript: { type: "object" } } },
+  },
+  {
+    name: "buy_phone_number",
+    endpoint: `${BASE}/api/asp/phone/buy-number`,
+    price: "$1.00",
+    description: "Buy a real phone number. Provide either an exact e164, or {country, areaCode?} to auto-select.",
+    input: {
+      type: "object",
+      properties: {
+        e164: { type: "string" },
+        country: { type: "string", description: "ISO country code, e.g. 'US'" },
+        areaCode: { type: "string" },
+        webhookUrl: { type: "string", format: "uri" },
+      },
+    },
+    output: { type: "object", properties: { phoneNumber: { type: "object" }, accessToken: { type: "string" } } },
+  },
+  {
+    name: "release_phone_number",
+    endpoint: `${BASE}/api/asp/phone/release-number`,
+    price: "$0.005",
+    description: "Release a phone number back to the provider",
+    input: { type: "object", required: ["phoneNumberId"], properties: { phoneNumberId: { type: "string" } } },
+    output: { type: "object", properties: { released: { type: "boolean" } } },
+  },
+  {
+    name: "start_call",
+    endpoint: `${BASE}/api/asp/phone/start-call`,
+    price: "$0.05",
+    description: "Place an outbound call from one of your numbers",
+    input: {
+      type: "object",
+      required: ["phoneNumberId", "to"],
+      properties: {
+        phoneNumberId: { type: "string" },
+        to: { type: "string", description: "E.164 destination" },
+        webhookUrl: { type: "string", format: "uri" },
+        twiml: { type: "string", description: "Inline TwiML script (Twilio adapter)" },
+      },
+    },
+    output: { type: "object", properties: { call: { type: "object" } } },
+  },
+  {
+    name: "answer_call",
+    endpoint: `${BASE}/api/asp/phone/answer-call`,
+    price: "$0.005",
+    description: "Answer an inbound ringing call (mapped via webhook to your tenant)",
+    input: { type: "object", required: ["callId"], properties: { callId: { type: "string" } } },
+    output: { type: "object", properties: { call: { type: "object" } } },
+  },
+  {
+    name: "end_call",
+    endpoint: `${BASE}/api/asp/phone/end-call`,
+    price: "$0.005",
+    description: "Hang up an active call",
+    input: { type: "object", required: ["callId"], properties: { callId: { type: "string" } } },
+    output: { type: "object", properties: { call: { type: "object" } } },
+  },
+
+  // ═════════════════════════════════════════════════════════════════════════
+  // ═ DOMAIN  ═══════════════════════════════════════════════════════════════
+  // ═════════════════════════════════════════════════════════════════════════
+
+  {
+    name: "search_domain",
+    endpoint: `${BASE}/api/asp/domain/search`,
+    price: "free",
+    description: "Check availability of a domain across common TLDs",
+    input: {
+      type: "object",
+      required: ["query"],
+      properties: {
+        query: { type: "string", description: "Bare label, e.g. 'acmecorp'" },
+        tlds: { type: "array", items: { type: "string" } },
+      },
+    },
+    output: { type: "object", properties: { results: { type: "array" } } },
+  },
+  {
+    name: "list_domains",
+    endpoint: `${BASE}/api/asp/domain/list`,
+    price: "free",
+    description: "List all domains owned by the authenticated tenant",
+    input: { type: "object", properties: {} },
+    output: { type: "object", properties: { domains: { type: "array" } } },
+  },
+  {
+    name: "list_dns_records",
+    endpoint: `${BASE}/api/asp/domain/dns/list`,
+    price: "free",
+    description: "List DNS records for a domain you own (live registrar state)",
+    input: {
+      type: "object",
+      properties: { domainId: { type: "string" }, name: { type: "string" } },
+    },
+    output: { type: "object", properties: { records: { type: "array" } } },
+  },
+  {
+    name: "register_domain",
+    endpoint: `${BASE}/api/asp/domain/register`,
+    price: "$10.00",
+    description: "Register a domain with the configured registrar (ICANN contact required)",
+    input: {
+      type: "object",
+      required: ["domain", "contact"],
+      properties: {
+        domain: { type: "string" },
+        years: { type: "number", default: 1 },
+        contact: {
+          type: "object",
+          required: ["firstName", "lastName", "email", "phone", "address1", "city", "postalCode", "country"],
+          properties: {
+            firstName: { type: "string" },
+            lastName: { type: "string" },
+            email: { type: "string", format: "email" },
+            phone: { type: "string" },
+            address1: { type: "string" },
+            city: { type: "string" },
+            state: { type: "string" },
+            postalCode: { type: "string" },
+            country: { type: "string", description: "ISO 3166-1 alpha-2" },
+            organization: { type: "string" },
+          },
+        },
+        nameservers: { type: "array", items: { type: "string" } },
+        autoRenew: { type: "boolean" },
+      },
+    },
+    output: { type: "object", properties: { domain: { type: "object" }, accessToken: { type: "string" } } },
+  },
+  {
+    name: "renew_domain",
+    endpoint: `${BASE}/api/asp/domain/renew`,
+    price: "$10.00",
+    description: "Extend a domain registration by N years",
+    input: {
+      type: "object",
+      properties: {
+        domainId: { type: "string" },
+        name: { type: "string" },
+        years: { type: "number", default: 1 },
+      },
+    },
+    output: { type: "object", properties: { domain: { type: "object" } } },
+  },
+  {
+    name: "update_dns_record",
+    endpoint: `${BASE}/api/asp/domain/dns/update`,
+    price: "$0.01",
+    description: "Create or update a single DNS record on a domain you own",
+    input: {
+      type: "object",
+      required: ["record"],
+      properties: {
+        domainId: { type: "string" },
+        name: { type: "string" },
+        record: {
+          type: "object",
+          required: ["type", "name", "value"],
+          properties: {
+            recordId: { type: "string", description: "Provide to update an existing record; omit to create" },
+            type: { type: "string", enum: ["A", "AAAA", "CNAME", "MX", "TXT", "NS", "SRV", "CAA"] },
+            name: { type: "string" },
+            value: { type: "string" },
+            ttl: { type: "number" },
+            priority: { type: "number" },
+          },
+        },
+      },
+    },
+    output: { type: "object", properties: { record: { type: "object" } } },
+  },
+  {
+    name: "delete_dns_record",
+    endpoint: `${BASE}/api/asp/domain/dns/delete`,
+    price: "$0.005",
+    description: "Delete a single DNS record from a domain you own",
+    input: { type: "object", required: ["recordId"], properties: { recordId: { type: "string" } } },
+    output: { type: "object", properties: { deleted: { type: "boolean" } } },
+  },
 ]
 
 export function GET() {
   return NextResponse.json({
-    name: "AgentMail",
-    version: "1.0.0",
-    description: `AI-native communication platform for agents — currently providing Email (send, receive, thread, search via @${EMAIL_DOMAIN} mailboxes) with Voice capabilities planned for a future release.`,
+    name: "AgentOS",
+    version: "1.1.0",
+    description: `Real communication and identity infrastructure for AI agents — Email (send/receive/thread/search via @${EMAIL_DOMAIN} mailboxes), Phone (buy numbers, place calls, transcripts), and Domain (search, register, DNS management). Each capability is exposed as a fixed-price REST endpoint suitable for OKX.AI ASP registration.`,
     documentation: `${BASE}/docs`,
-    identity: {
-      model: "Session-token after first paid call. mailbox/create verifies your x402 payer wallet, then returns an 'accessToken' (at_...) which authenticates ALL subsequent calls (both free and paid) via Authorization: Bearer.",
-      paid: "Identified by the payer wallet extracted from the verified x402 PAYMENT-SIGNATURE. Falls back to Authorization: Bearer at_... session token if wallet already known.",
-      free: "Identified by Authorization: Bearer at_... session token issued from the first paid call (typically mailbox/create).",
-      dev: "During development you can pass X-Wallet-Address: 0x... or X-OKX-Agent-ID: <id> as unsigned identity — this is insecure and only works when PAYMENT_REQUIRED=false.",
+    perServiceGuides: {
+      email: `${BASE}/api/asp/email`,
+      phone: `${BASE}/api/asp/phone`,
+      domain: `${BASE}/api/asp/domain`,
+    },
+    startHere: {
+      why: "Every non-provisioning endpoint requires an accessToken. To get one, call ONE of the three endpoints below — pick the capability you need first. Each one pays via x402 (USDT0 on X Layer) and returns an accessToken that unlocks all three services.",
+      provisioningEndpoints: [
+        {
+          service: "email",
+          endpoint: `${BASE}/api/asp/mailbox/create`,
+          price: "$0.25",
+          provides: "a real @-address you can send from and receive at",
+          example: `curl -X POST ${BASE}/api/asp/mailbox/create -H "Content-Type: application/json" -H "PAYMENT-SIGNATURE: <b64>" -d '{"name":"my-agent"}'`,
+        },
+        {
+          service: "phone",
+          endpoint: `${BASE}/api/asp/phone/buy-number`,
+          price: "$1.00",
+          provides: "a real phone number you can call from and receive calls on",
+          example: `curl -X POST ${BASE}/api/asp/phone/buy-number -H "Content-Type: application/json" -H "PAYMENT-SIGNATURE: <b64>" -d '{"country":"US"}'`,
+        },
+        {
+          service: "domain",
+          endpoint: `${BASE}/api/asp/domain/register`,
+          price: "$10.00",
+          provides: "a registered domain with DNS you can manage",
+          example: `curl -X POST ${BASE}/api/asp/domain/register -H "Content-Type: application/json" -H "PAYMENT-SIGNATURE: <b64>" -d '{"domain":"acmecorp.com","years":1,"contact":{...}}'`,
+        },
+      ],
+      note: "One accessToken authenticates ALL three services. You don't need to pay for another one just to try email after starting with phone.",
+    },
+    identity: humanIdentityDocs(),
+    stack: {
+      framework: "Next.js (App Router)",
+      database: "Supabase (Postgres) — every resource row is tenant-scoped by userId",
+      isolation: "Tenant isolation is enforced at the database query layer (every read/write filters by userId), not just at the API. Provider secrets stay server-side; agents only see their accessToken and their own data.",
     },
     paymentProtocol: "x402 v2 (USDT0 on X Layer / eip155:196)",
-    webhookSecurity: "Inbound email events are signed with X-AgentMail-Signature: sha256=<hmac>. Verify using WEBHOOK_SECRET from your mailbox setup.",
+    webhookSecurity: {
+      email: "Inbound email events are signed with X-AgentMail-Signature: sha256=<hmac>. Verify using WEBHOOK_SECRET from your mailbox setup.",
+      phone: "Provider-signed inbound at /api/webhooks/phone. Signature header depends on the active provider (x-twilio-signature, etc.). Deduplicated via WebhookEvent.externalId.",
+      domain: "Registrar-signed inbound at /api/webhooks/domain. Same idempotency guarantee as phone.",
+    },
     getStarted: {
-      step1: `POST ${BASE}/api/asp/mailbox/create with {name} — pay $0.25 USDT0 via x402. Response gives you: mailbox.agentId (the mailbox handle), mailbox.emailAddress (your @${EMAIL_DOMAIN} address), and accessToken (session key).`,
-      step2: "Save the accessToken. Send it as 'Authorization: Bearer <accessToken>' on EVERY subsequent call (both free and paid). This authenticates you without repeating x402.",
-      step3: `Save mailbox.agentId — you'll pass it as 'agentId' in send_email, get_inbox, search_emails, update_mailbox, delete_mailbox.`,
-      step4: `Configure a webhook to receive inbound email in real time: POST ${BASE}/api/asp/mailbox/update with {agentId, webhookUrl}. Or poll ${BASE}/api/asp/inbox/get with {agentId} periodically.`,
-      step5: `Send outbound: POST ${BASE}/api/asp/email/send with {agentId, to, subject, body}. Reply to inbound: POST ${BASE}/api/asp/email/reply with {emailId, body}.`,
-      note: "Every endpoint response includes a 'hint' object describing the recommended next call. Use it to chain operations without guessing.",
+      choose: "Pick one of the three services. Each has its own paid provisioning endpoint that issues an accessToken. After that, both free and paid endpoints of that service (and every other AgentOS service) authenticate via Authorization: Bearer <accessToken>.",
+      email: EMAIL_GUIDE.quickStart,
+      phone: PHONE_GUIDE.quickStart,
+      domain: DOMAIN_GUIDE.quickStart,
+      commonPattern: "Every response includes a 'hint' object with next-step suggestions and copy-pasteable examples. Chain calls off `hint.next` — do not guess endpoint shapes.",
     },
     services: SERVICES,
   })

@@ -1,8 +1,16 @@
-# AgentMail
+# AgentOS
 
-Real email infrastructure for AI agents. Give any agent its own dedicated email address — send, receive, and manage email through a single REST API.
+Real communication and identity infrastructure for AI agents. Give any agent its own email address, phone number, and domain — send email, place calls, register DNS, all through a single REST API.
 
 Built as an **ASP (Agent Service Provider)** on OKX.AI.
+
+The initial services are:
+
+- **Email** — send/receive mail, threads, templates
+- **Phone** — buy real numbers, place outbound calls, receive inbound calls, transcripts
+- **Domain** — search availability, register domains, manage DNS
+
+The Email service is the most mature and preserves the original AgentMail behavior. Phone and Domain are new MVP services built on the same architecture.
 
 ---
 
@@ -410,6 +418,121 @@ The built-in dashboard at `/dashboard` provides full management UI:
 | Outbound email | Works (needs Resend key) | Works |
 | Inbound email | No (needs MX records) | Works |
 | x402 payments | Works (toggle env var) | Works |
+
+---
+
+## Phone
+
+Real phone numbers for agents. Each tenant owns their own numbers; inbound calls and transcripts are mapped to the correct tenant via the destination E.164 number.
+
+### Endpoints
+
+| Endpoint | Price | Description |
+|---|---|---|
+| `POST /api/asp/phone/numbers` | free | List your numbers |
+| `POST /api/asp/phone/calls/get` | free | Get a call by id |
+| `POST /api/asp/phone/calls/transcript` | free | Get STT transcript of a completed call |
+| `POST /api/asp/phone/buy-number` | **$1.00** | Buy a real number (exact e164, or `{country, areaCode?}`) |
+| `POST /api/asp/phone/release-number` | **$0.005** | Release a number |
+| `POST /api/asp/phone/start-call` | **$0.05** | Outbound call |
+| `POST /api/asp/phone/answer-call` | **$0.005** | Answer an inbound ringing call |
+| `POST /api/asp/phone/end-call` | **$0.005** | Hang up |
+
+### Provider
+
+`PhoneProvider` interface (`src/lib/providers/phone.ts`) with two adapters shipped:
+
+- `MockPhoneProvider` — default, deterministic, no external calls (dev + tests)
+- `TwilioPhoneProvider` — thin Twilio REST adapter (activated by `PHONE_PROVIDER=twilio` + `TWILIO_ACCOUNT_SID`/`TWILIO_AUTH_TOKEN`)
+
+Inbound events land at `POST /api/webhooks/phone`. The handler verifies the provider signature, deduplicates via `WebhookEvent.externalId`, then routes to `ingestCallEvent` which either updates an existing call or provisions a new `Call` row scoped to the tenant that owns the destination number.
+
+---
+
+## Domain
+
+Domain registration and DNS management for agents. Every domain and DNS record row is tenant-scoped by `userId`.
+
+### Endpoints
+
+| Endpoint | Price | Description |
+|---|---|---|
+| `POST /api/asp/domain/search` | free | Check availability across TLDs |
+| `POST /api/asp/domain/list` | free | List your registered domains |
+| `POST /api/asp/domain/dns/list` | free | List live DNS records for a domain you own |
+| `POST /api/asp/domain/register` | **$10.00** | Register a domain (ICANN contact required) |
+| `POST /api/asp/domain/renew` | **$10.00** | Extend registration |
+| `POST /api/asp/domain/dns/update` | **$0.01** | Create/update a DNS record |
+| `POST /api/asp/domain/dns/delete` | **$0.005** | Delete a DNS record |
+
+### Provider
+
+`DomainProvider` interface (`src/lib/providers/domain.ts`). MVP ships with `MockDomainProvider`; production would plug in Namecheap / Porkbun / Cloudflare Registrar behind the same interface. The service layer always calls the provider first (source of truth), then reconciles the local mirror row for indexing and tenant scoping.
+
+Registrar events land at `POST /api/webhooks/domain` and update the local domain state.
+
+---
+
+## Architecture principles
+
+- **API-first, not MCP.** REST endpoints are the public product surface. Every capability is one endpoint with one fixed price, as the OKX.AI ASP marketplace registers per URL.
+- **Fixed price per service.** If two capabilities need different prices, they are split into separate URLs. Never a single endpoint with variable pricing.
+- **Provider-agnostic core.** Business logic lives in `src/lib/{email,phone,domain}-service.ts`. Provider-specific code lives in `src/lib/providers/*.ts` behind a normalized interface. Swapping providers touches only the adapter.
+- **Tenant isolation at every layer.** All service queries filter by `userId`. Resources are resolved by `(id, userId)` before any write. Inbound webhooks map back to the owning tenant via the resource identifier (destination phone number, registered domain name).
+- **Credentials never leak.** Provider API keys stay server-side. Callers get a session token (`at_...`) after their first paid call and use it as `Authorization: Bearer` on subsequent calls (both free and paid).
+- **Free ≠ public.** Tenant-scoped read endpoints (inbox, call transcripts, DNS list) still require auth and still scope reads to the caller's tenant.
+- **x402 pay-per-call.** Paid endpoints return 402 when payment is missing/invalid and are retryable with a valid `PAYMENT-SIGNATURE`. When `PAYMENT_REQUIRED != true` the middleware short-circuits to dev mode; auth still applies.
+
+### Layered request path
+
+```
+Client / OKX.AI Agent
+   │
+   ▼
+POST /api/asp/<service>/<action>
+   │
+   ▼   createPaidRoute / createFreeRoute  (src/lib/asp-route.ts)
+   │
+   ├── x402 requirePayment (paid only)         → 402 or verified payer
+   ├── auth: resolvePaidUser | getRequestUser  → tenant identity
+   │
+   ▼
+Service layer  (email-service | phone-service | domain-service)
+   │  ── every read/write filters by userId
+   │
+   ▼
+Provider adapter  (Resend | MockPhone / Twilio | MockDomain)
+   │
+   ▼
+Database (Supabase)  |  External provider API
+```
+
+### Database (per-tenant)
+
+Every non-lookup table carries `userId`. New tables added for this milestone:
+
+- `PhoneNumber (id, userId, e164 UNIQUE, provider, providerNumberId, capabilities, webhookUrl, isActive)`
+- `Call (id, userId, phoneNumberId, direction, fromNumber, toNumber, status, providerCallId, startedAt, answeredAt, endedAt, durationSec, recordingUrl)`
+- `CallTranscript (id, callId UNIQUE, userId, text, language, segments)`
+- `Domain (id, userId, name UNIQUE, provider, providerDomainId, status, registeredAt, expiresAt, autoRenew, nameservers)`
+- `DnsRecord (id, userId, domainId, type, name, value, ttl, priority, providerRecordId)`
+- `WebhookEvent (id, provider, kind, externalId UNIQUE, payload, receivedAt, processedAt)` — inbound event idempotency
+- `AccessToken (token, userId, createdAt, lastUsedAt)` — session tokens issued after first paid call
+
+Migration SQL lives in `prisma/migrations/20260721000000_phone_domain/migration.sql`. Prisma schema is documentation-only; the app talks to Supabase directly.
+
+### Environment variables
+
+Existing (see Setup section above): `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `RESEND_API_KEY`, `RESEND_WEBHOOK_SECRET`, `EMAIL_DOMAIN`, `PAYMENT_REQUIRED`, `PAYMENT_WALLET`, `OKX_API_KEY`, `OKX_SECRET_KEY`, `OKX_PASSPHRASE`.
+
+New:
+
+| Variable | Purpose |
+|---|---|
+| `PHONE_PROVIDER` | `mock` (default) or `twilio` |
+| `TWILIO_ACCOUNT_SID` | Twilio credentials (only when `PHONE_PROVIDER=twilio`) |
+| `TWILIO_AUTH_TOKEN` | Twilio credentials |
+| `DOMAIN_PROVIDER` | reserved — MVP ships mock only |
 
 ---
 

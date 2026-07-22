@@ -1,38 +1,29 @@
 import type { Metadata } from "next"
-import { IBM_Plex_Sans, Instrument_Serif, JetBrains_Mono } from "next/font/google"
+import { GeistSans } from "geist/font/sans"
+import { GeistMono } from "geist/font/mono"
+import { ThemeProvider } from "@/components/theme-provider"
+import { Toaster } from "@/components/ui/sonner"
 import "./globals.css"
 
-const ibmPlexSans = IBM_Plex_Sans({
-  variable: "--font-ibm-plex-sans",
-  subsets: ["latin"],
-  weight: ["400", "500", "600"],
-})
-
-const instrumentSerif = Instrument_Serif({
-  variable: "--font-instrument-serif",
-  subsets: ["latin"],
-  weight: ["400"],
-})
-
-const jetbrainsMono = JetBrains_Mono({
-  variable: "--font-jetbrains-mono",
-  subsets: ["latin"],
-  weight: ["400", "500"],
-})
-
 export const metadata: Metadata = {
-  title: "AgentMail — Email for AI Agents",
+  title: "AgentOS — Real communication infrastructure for AI agents",
   description:
-    "Give your AI agents their own real email addresses. Full send/receive, inbox management, and webhooks. Available as an ASP on OKX.AI.",
+    "Email, phone, and domain services for AI agents. Every agent gets its own real address, real number, and real domain — all through a single REST API, paid per call via x402 on OKX.AI.",
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html
       lang="en"
-      className={`${ibmPlexSans.variable} ${instrumentSerif.variable} ${jetbrainsMono.variable}`}
+      className={`${GeistSans.variable} ${GeistMono.variable}`}
+      suppressHydrationWarning
     >
-      <body>{children}</body>
+      <body>
+        <ThemeProvider>
+          {children}
+          <Toaster />
+        </ThemeProvider>
+      </body>
     </html>
   )
 }

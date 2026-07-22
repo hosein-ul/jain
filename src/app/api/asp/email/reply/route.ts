@@ -1,8 +1,8 @@
 ﻿import { NextRequest, NextResponse } from "next/server"
-import { } from "@/lib/auth"
+import { verifyEmailOwnership } from "@/lib/auth"
 import { replyEmail } from "@/lib/email-service"
 import { createPaidRoute } from "@/lib/asp-route"
-import { safeJson, resolvePaidUser } from "@/lib/asp-hints"
+import { safeJson, resolvePaidUser, unauthorizedError, missingFieldError, notFoundError } from "@/lib/asp-hints"
 
 export const { POST, GET } = createPaidRoute(
   "/api/asp/email/reply",
@@ -10,13 +10,16 @@ export const { POST, GET } = createPaidRoute(
   "Reply to an email, preserving the thread",
   async (req: NextRequest, { payer }) => {
     const user = await resolvePaidUser(req, payer)
-    if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    if (!user) return unauthorizedError("email")
 
     const body = await safeJson(req)
     const { emailId, body: replyBody, html, cc, attachments } = body
 
-    if (!emailId || !replyBody) {
-      return NextResponse.json({ error: "emailId and body are required" }, { status: 400 })
+    if (!emailId) return missingFieldError("emailId", "Get this from a prior inbox/get or search response.")
+    if (!replyBody) return missingFieldError("body", "The text of your reply. HTML is optional in a separate 'html' field.")
+
+    if (!(await verifyEmailOwnership(emailId, user.id))) {
+      return notFoundError("email", "This emailId isn't in any mailbox you own. Confirm the id with POST /api/asp/inbox/get.")
     }
 
     const result = await replyEmail(emailId, replyBody, { html, cc, attachments })

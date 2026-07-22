@@ -42,16 +42,42 @@ function decodePaymentHeader(header: string): PaymentPayload | null {
   }
 }
 
+// Buyer-facing input schema for the paid replay. Mirrors the OKX A2MCP shape:
+// method + bodyType + JSON Schema of the request body, so the buyer's CLI knows
+// to POST JSON (not probe with the default GET) and can validate params ahead.
+export interface EndpointInputSchema {
+  type: "http"
+  method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE"
+  bodyType?: "json" | "form-data" | "text"
+  body?: unknown       // JSON Schema — required fields for POST/PUT/PATCH
+  queryParams?: unknown
+  pathParams?: unknown
+  headers?: unknown
+}
+
 export interface PaymentConfig {
   price: string        // e.g. "$0.05" (USD-denominated; SDK converts to USDT0 atomic units)
   description: string
   resource: string     // full URL of this endpoint
+  input?: EndpointInputSchema  // A2MCP outputSchema.input — surfaced to the buyer
 }
 
 export type PaymentResult =
   | { status: "free" }                                   // payment disabled / dev mode → proceed
   | { status: "required"; response: NextResponse }       // 402 — caller returns this
   | { status: "paid"; settlementHeader?: string; payer?: string }  // verified + settled → proceed
+
+function attachOutputSchema(requirements: PaymentRequirements[], input?: EndpointInputSchema) {
+  if (!input) return requirements
+  return requirements.map(r => ({
+    ...r,
+    extra: {
+      ...(r.extra ?? {}),
+      // A2MCP-shaped: buyers looking for `outputSchema.input` find it here.
+      outputSchema: { input },
+    },
+  }))
+}
 
 // Enforce x402 payment for a paid endpoint.
 export async function requirePayment(
@@ -65,7 +91,7 @@ export async function requirePayment(
 
   const resourceInfo = { url: config.resource, description: config.description }
 
-  const requirements = await server.buildPaymentRequirementsFromOptions(
+  const rawRequirements = await server.buildPaymentRequirementsFromOptions(
     [
       {
         scheme: "exact",
@@ -76,6 +102,7 @@ export async function requirePayment(
     ],
     null
   )
+  const requirements = attachOutputSchema(rawRequirements, config.input)
 
   const paymentHeader = readPaymentHeader(request)
 

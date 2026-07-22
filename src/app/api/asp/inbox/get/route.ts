@@ -2,11 +2,11 @@
 import { getUserFromOkxHeader, verifyAgentOwnership } from "@/lib/auth"
 import { getInbox } from "@/lib/email-service"
 import { createFreeRoute } from "@/lib/asp-route"
-import { safeJson } from "@/lib/asp-hints"
+import { safeJson, unauthorizedError } from "@/lib/asp-hints"
 
 export const { POST, GET } = createFreeRoute("/api/asp/inbox/get", "Fetch an agent's inbox with optional filtering (unread, sender, date, direction)", async (req: NextRequest) => {
   const user = await getUserFromOkxHeader(req)
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  if (!user) return unauthorizedError("email")
 
   const body = await safeJson(req).catch(() => ({}))
   const { agentId, limit = 50, offset = 0, filter } = body

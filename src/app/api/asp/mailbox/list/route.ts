@@ -2,10 +2,11 @@
 import { getUserFromOkxHeader } from "@/lib/auth"
 import { listAgents } from "@/lib/email-service"
 import { createFreeRoute } from "@/lib/asp-route"
+import { unauthorizedError } from "@/lib/asp-hints"
 
 export const { POST, GET } = createFreeRoute("/api/asp/mailbox/list", "List all agent mailboxes owned by the authenticated user", async (req: NextRequest) => {
   const user = await getUserFromOkxHeader(req)
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  if (!user) return unauthorizedError("email")
 
   const agents = await listAgents(user.id)
   const mailboxes = agents.map(a => ({ ...a, agentId: a.id }))

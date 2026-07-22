@@ -62,3 +62,93 @@ model EmailTemplate {
   userId    String
   createdAt DateTime @default(now())
 }
+
+model PhoneNumber {
+  id               String   @id @default(cuid())
+  userId           String
+  e164             String   @unique
+  provider         String
+  providerNumberId String
+  capabilities     String
+  webhookUrl       String?
+  isActive         Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  calls            Call[]
+}
+
+model Call {
+  id             String    @id @default(cuid())
+  userId         String
+  phoneNumberId  String
+  phoneNumber    PhoneNumber @relation(fields: [phoneNumberId], references: [id])
+  direction      String
+  fromNumber     String
+  toNumber       String
+  status         String
+  providerCallId String?
+  startedAt      DateTime?
+  answeredAt     DateTime?
+  endedAt        DateTime?
+  durationSec    Int?
+  recordingUrl   String?
+  metadata       String?
+  createdAt      DateTime  @default(now())
+  transcript     CallTranscript?
+}
+
+model CallTranscript {
+  id        String   @id @default(cuid())
+  callId    String   @unique
+  userId    String
+  call      Call     @relation(fields: [callId], references: [id])
+  language  String?
+  text      String
+  segments  String?
+  createdAt DateTime @default(now())
+}
+
+model Domain {
+  id               String   @id @default(cuid())
+  userId           String
+  name             String   @unique
+  provider         String
+  providerDomainId String?
+  status           String
+  registeredAt     DateTime?
+  expiresAt        DateTime?
+  autoRenew        Boolean  @default(false)
+  nameservers      String?
+  createdAt        DateTime @default(now())
+  dnsRecords       DnsRecord[]
+}
+
+model DnsRecord {
+  id               String   @id @default(cuid())
+  userId           String
+  domainId         String
+  domain           Domain   @relation(fields: [domainId], references: [id])
+  type             String
+  name             String
+  value            String
+  ttl              Int      @default(3600)
+  priority         Int?
+  providerRecordId String?
+  createdAt        DateTime @default(now())
+}
+
+model WebhookEvent {
+  id          String   @id @default(cuid())
+  provider    String
+  kind        String
+  externalId  String   @unique
+  payload     String
+  receivedAt  DateTime @default(now())
+  processedAt DateTime?
+}
+
+model AccessToken {
+  token      String   @id
+  userId     String
+  createdAt  DateTime @default(now())
+  lastUsedAt DateTime?
+}

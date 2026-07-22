@@ -2,11 +2,11 @@
 import { getUserFromOkxHeader } from "@/lib/auth"
 import { supabase } from "@/lib/supabase"
 import { createFreeRoute } from "@/lib/asp-route"
-import { safeJson } from "@/lib/asp-hints"
+import { safeJson, unauthorizedError } from "@/lib/asp-hints"
 
 export const { POST, GET } = createFreeRoute("/api/asp/template/delete", "Delete a saved email template by ID", async (req: NextRequest) => {
   const user = await getUserFromOkxHeader(req)
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  if (!user) return unauthorizedError("email")
 
   const body = await safeJson(req)
   const { templateId } = body
